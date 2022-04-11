@@ -115,17 +115,8 @@ Joystick::Joystick(int VRx, int VRy, int Sw, int button_mode)
     VRy = VRy;
     Sw = Sw;
 
-    if (button_mode == 1)
+    if (button_mode != 0 && button_mode != 1)
     {
-        pinMode(Sw, INPUT_PULLUP);
-    }
-    else if (button_mode == 0)
-    {
-        pinMode(Sw, INPUT);
-    }
-    else
-    {
-
         Serial.println("Invalid button mode");
         delay(500);
         exit(-1);
