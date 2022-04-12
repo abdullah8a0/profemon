@@ -30,7 +30,10 @@ enum button_state
  *  flag = 0 means no reading
  *  flag = 1 means a short press happened
  *  flag = 2 means a long press happened (>1 second)
- *
+ * 
+ * 
+ * edit
+ * edit again
  *  The button is debounced by a 10ms delay.
  *  Most of the time, you only care to check if flag > 0.
  *
