@@ -4,7 +4,25 @@
 
 #define LONG_PRESS_DURATION 1000
 #define DEBOUNCE_DURATION 10
-#define JOYSTICK_DEADZONE 200
+#define JOYSTICK_DEADZONE 400
+
+enum joystick_direction
+{
+    NONE,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+};
+
+enum button_state
+{
+    S0,
+    S1,
+    S2,
+    S3,
+    S4
+};
 
 /**
  * @brief Button class, just call update() to read the button state
@@ -28,6 +46,7 @@ class Button
     int button_pressed;
     button_state state;
     void read();
+    char *d;
 
 public:
     int update();
@@ -52,39 +71,24 @@ class Joystick
     int Sw;
     int VRx_val;
     int VRy_val;
-    int Sw_val;
     int button_mode;
     int previous_button_pressed = 0;
+    char c;
 
     Button button;
     void read();
 
 public:
-    Joystick(int VRx, int VRy, int Sw, int button_mode);
+    Joystick(int VRx, int VRy, int Sw, int button_mode) : VRx(VRx),
+                                                          VRy(VRy),
+                                                          Sw(Sw),
+                                                          VRx_val(0),
+                                                          VRy_val(0),
+                                                          button_mode(button_mode),
+                                                          button(Sw){};
     joystick_direction update();
     joystick_direction direction;
-};
-
-enum joystick_direction
-{
-    NONE,
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    UP_LEFT,
-    UP_RIGHT,
-    DOWN_LEFT,
-    DOWN_RIGHT
-};
-
-enum button_state
-{
-    S0,
-    S1,
-    S2,
-    S3,
-    S4
+    int Sw_val;
 };
 
 #endif
