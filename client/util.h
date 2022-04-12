@@ -21,6 +21,7 @@
  *
  * @param p pin number, itialize its mode in setup()
  */
+enum button_state {S0,S1,S2,S3,S4};
 class Button
 {
     int S2_start_time;
@@ -48,6 +49,18 @@ public:
  * @param button_mode if 1, button will return 1 during rising edge, -1 during falling edge
  *                    if 0, button is a normal button
  */
+enum joystick_direction
+{
+    NONE,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    UP_LEFT,
+    UP_RIGHT,
+    DOWN_LEFT,
+    DOWN_RIGHT
+};
 class Joystick
 {
     int VRx;
@@ -66,28 +79,6 @@ public:
     Joystick(int VRx, int VRy, int Sw, int button_mode);
     joystick_direction update();
     joystick_direction direction;
-};
-
-enum joystick_direction
-{
-    NONE,
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    UP_LEFT,
-    UP_RIGHT,
-    DOWN_LEFT,
-    DOWN_RIGHT
-};
-
-enum button_state
-{
-    S0,
-    S1,
-    S2,
-    S3,
-    S4
 };
 
 #endif
