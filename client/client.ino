@@ -74,7 +74,7 @@ int wifi_object_builder(char* object_string, uint32_t os_len, uint8_t channel, i
 char*  SERVER = "googleapis.com";  // Server URL
 
 //main body of code
-void loop(char* uid, char* RESPONSE) {
+void catch_request(char* uid, char* RESPONSE) {
 	int offset = sprintf(json_body, "%s", PREFIX);
     int n = WiFi.scanNetworks(); //run a new scan. could also modify to use original scan from setup so quicker (though older info)
     Serial.println("scan done");
