@@ -104,10 +104,6 @@ public:
                                                           button(Sw){};
     joystick_direction update();
     joystick_direction direction;
-<<<<<<< HEAD
-=======
-    int Sw_val;
->>>>>>> 72f3c8d6ce241a4ad06c899b850f8cf94bc46a6a
 };
 
 #endif
