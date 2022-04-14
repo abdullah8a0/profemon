@@ -1,14 +1,16 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
-
-TFT_eSPI tft = TFT_eSPI();
-
+#include<string.h>
 #include <JPEGDecoder.h>
 #include "renderjpeg.h"
 #include "images.h"
+#include <WiFiClientSecure.h>
+#include <WiFiClient.h>
+#include <ArduinoJson.h>
 
 #include "Button.h"
 
+TFT_eSPI tft = TFT_eSPI();
 const int SCREEN_HEIGHT = 160;
 const int SCREEN_WIDTH = 128;
 const int BUTTON1 = 45;
@@ -41,6 +43,10 @@ const uint16_t OUT_BUFFER_SIZE = 1000; //size of buffer to hold HTTP response
 char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 
+char profemons[20][25];
+uint8_t profemon_count = 0;
+int8_t curr_idx = 0;
+
 
 void setup() {
   Serial.begin(115200);
@@ -57,8 +63,7 @@ void setup() {
 void loop() {
   int b1 = button1.update();
   int b2 = button2.update();
-  Serial.println(b1);
-  Serial.println(b2);
+
   switch(state) {
     case START:
       if(old_state != state) {
@@ -110,6 +115,12 @@ void loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("Press Button 1 to start pairing with an opponent.");
             old_game_state = game_state;
+
+            // obtain profemon list from server
+            strcpy(profemons[0], "JoeSteinmeyer");
+            strcpy(profemons[1], "AnaBell");
+            strcpy(profemons[2], "AdamHartz");
+            profemon_count = 3;
           }
           if(b1 == 1) {
             game_state = GAME_PAIR;
@@ -135,24 +146,29 @@ void loop() {
             tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("Select Profemon.");
-            drawArrayJpeg(JoeSteinmeyer, sizeof(JoeSteinmeyer), 16, 20);
-            tft.setCursor(10, 142, 2);
-            tft.println("  JoeSteinmeyer  ");
             old_game_state = game_state;
+            curr_idx = 0;
+            selectProfemon(profemons[curr_idx]);
           }
+
           if (b1 == 1) {
-            drawArrayJpeg(AnaBell, sizeof(AnaBell), 16, 20);
-            tft.setCursor(10, 142, 2);
-            tft.println("     AnaBell     ");
+            curr_idx++;
+            if (curr_idx >= profemon_count) {
+              curr_idx = 0;
+            }
+            selectProfemon(profemons[curr_idx]);
           }
           else if (b2 == 1) {
-            drawArrayJpeg(Steinmeyer, sizeof(Steinmeyer), 16, 20);
-            tft.setCursor(10, 142, 2);
-            tft.println("    AdamHartz    ");
+            curr_idx--;
+            if (curr_idx < 0) {
+              curr_idx = profemon_count - 1;
+            }
+            selectProfemon(profemons[curr_idx]);
           }
           else if (b1 == 2) {
+            tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.println("Selected Profemon.");
+            tft.printf("  Selected Profemon\n  %s.", profemons[curr_idx]);
             delay(1000);
             game_state = GAME_BATTLE;
           }
@@ -192,6 +208,21 @@ void loop() {
 
 }
 
+void selectProfemon(char* name) {
+  if (strcmp(name, "JoeSteinmeyer") == 0) {
+    drawArrayJpeg(JoeSteinmeyer, sizeof(JoeSteinmeyer), 16, 20);
+  }
+  else if (strcmp(name, "AnaBell") == 0) {
+    drawArrayJpeg(AnaBell, sizeof(AnaBell), 16, 20);
+  }
+  else if (strcmp(name, "AdamHartz") == 0) {
+    drawArrayJpeg(AdamHartz, sizeof(AdamHartz), 16, 20);
+  }
+  tft.setCursor(16, 142, 2);
+  tft.printf("%s        ", name);
+}
+
+
 void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int ypos) {
 
   int x = xpos;
@@ -199,6 +230,6 @@ void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int
 
   JpegDec.decodeArray(arrayname, array_size);
   jpegInfo();
-  renderJPEG(x, y);
+  renderJPEG(x, y, &tft);
 
 }

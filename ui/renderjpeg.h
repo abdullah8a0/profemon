@@ -1,6 +1,6 @@
 #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
 
-void renderJPEG(int xpos, int ypos) {
+void renderJPEG(int xpos, int ypos, TFT_eSPI *tft) {
 
   // retrieve infomration about the image
   uint16_t *pImg;
@@ -63,11 +63,11 @@ void renderJPEG(int xpos, int ypos) {
     }
 
     // draw image MCU block only if it will fit on the screen
-    if (( mcu_x + win_w ) <= tft.width() && ( mcu_y + win_h ) <= tft.height())
+    if (( mcu_x + win_w ) <= tft->width() && ( mcu_y + win_h ) <= tft->height())
     {
-      tft.pushRect(mcu_x, mcu_y, win_w, win_h, pImg);
+      tft->pushRect(mcu_x, mcu_y, win_w, win_h, pImg);
     }
-    else if ( (mcu_y + win_h) >= tft.height()) JpegDec.abort(); // Image has run off bottom of screen so abort decoding
+    else if ( (mcu_y + win_h) >= tft->height()) JpegDec.abort(); // Image has run off bottom of screen so abort decoding
   }
 
   // calculate how long it took to draw the image
