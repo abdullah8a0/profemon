@@ -4,31 +4,21 @@ Button::Button(int p)
 {
     flag = 0;
     state = S0;
-    this->pin = p;
+    pin = p;
     S2_start_time = millis();      // init
     button_change_time = millis(); // init
     debounce_duration = DEBOUNCE_DURATION;
     long_press_duration = LONG_PRESS_DURATION;
     button_pressed = 0;
-    // d = (char *)malloc(sizeof(char) * 10);
-    // sprintf(d, "%d", 1);
 }
 void Button::read()
 {
-    Serial.print("here 3");
     int button_val = digitalRead(pin);
     button_pressed = !button_val; // invert button
-    Serial.print("pin: ");
-    Serial.print(pin);
-    Serial.print(" button_pressed: ");
-    Serial.println(button_pressed);
 }
 
 int Button::update()
 {
-    Serial.print("d: ");
-    Serial.println(d);
-    delay(2000);
     read();
     flag = 0;
 
@@ -115,17 +105,28 @@ int Button::update()
     return flag;
 }
 
-// Joystick::Joystick(int VRx, int VRy, int Sw, int button_mode)
-// {
-// }
-
-void Joystick::read()
+Joystick::Joystick(int VRx, int VRy, int Sw, int button_mode)
 {
-    int raw_VRx_val = analogRead(VRx);
-    int raw_VRy_val = analogRead(VRy);
-    VRx_val = map(raw_VRx_val, 0, 1023, -512, 512);
-    VRy_val = map(raw_VRy_val, 0, 1023, -512, 512);
+    button_mode = button_mode;
+    VRx_val = 0;
+    VRy_val = 0;
+    Sw_val = 0;
+    VRx = VRx;
+    VRy = VRy;
+    Sw = Sw;
 
+    if (button_mode != 0 && button_mode != 1)
+    {
+        Serial.println("Invalid button mode");
+        delay(500);
+        exit(-1);
+    }
+    button = Button(Sw);
+}
+Joystick::read()
+{
+    VRx_val = map(analogRead(VRx), 0, 1023, -512, 512);
+    VRy_val = map(analogRead(VRy), 0, 1023, -512, 512);
     if (button_mode == 1)
     {
         int button_pressed = !digitalRead(Sw);
@@ -145,24 +146,21 @@ void Joystick::read()
     }
     else if (button_mode == 0)
     {
-        Serial.print("here 2");
         Sw_val = button.update();
     }
 }
 /**
  * @brief get the direction of the Joystick, returns NONE if no direction.
- *  The possible Directions are: NONE, UP, DOWN, LEFT, RIGHT
+ *  The possible Directions are: NONE, UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT
  *  The joystick must be outside of the deadzone for this to return a direction.
  *  VRx_val and VRy_val are the current x and y coordinates of the joystick.
  *
-
- *  LEFT = x < -JOYSTICK_DEADZONE and abs(y) < JOYSTICK_DEADZONE
+ *  LEFT = x < -JOYSTICK_DEADZONE  and abs(y) < JOYSTICK_DEADZONE
  *
- * @return the direction of the Joystick returns nones on corner cases.
+ * @return the direction of the Joystick
  */
-joystick_direction Joystick::update()
+Joystick::update()
 {
-    Serial.print("here 1");
     read();
     if (abs(VRx_val) < JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
@@ -176,13 +174,29 @@ joystick_direction Joystick::update()
     {
         return RIGHT;
     }
-    else if (VRy_val < -JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
+    else if (VRy_val > JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
         return DOWN;
     }
-    else if (VRy_val > JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
+    else if (VRy_val < -JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
         return UP;
+    }
+    else if (VRx_val < -JOYSTICK_DEADZONE && VRy_val > JOYSTICK_DEADZONE)
+    {
+        return UP_LEFT;
+    }
+    else if (VRx_val > JOYSTICK_DEADZONE && VRy_val > JOYSTICK_DEADZONE)
+    {
+        return UP_RIGHT;
+    }
+    else if (VRx_val < -JOYSTICK_DEADZONE && VRy_val < -JOYSTICK_DEADZONE)
+    {
+        return DOWN_LEFT;
+    }
+    else if (VRx_val > JOYSTICK_DEADZONE && VRy_val < -JOYSTICK_DEADZONE)
+    {
+        return DOWN_RIGHT;
     }
     else
     {

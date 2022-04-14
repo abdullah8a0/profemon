@@ -39,6 +39,18 @@ def request_handler(request):
         except Exception as e:
             return e
     else:
+        # GET request with single UID passed in -> retrieve associated profemon
+        try:
+            cipher = request['values']['cipher']
+            conn = sqlite3.connect(profemon_db)
+            c = conn.cursor()
+            c.execute('''CREATE TABLE IF NOT EXISTS profemon (name text, cipher text, hp int, atk int, def int, spatk int, spdef int, spd int, move1 int, move2 int, move3 int, move4 int);''')
+            profemon = c.execute('''SELECT name FROM profemon WHERE cipher = ?;''', (cipher,)).fetchone()
+            conn.close()
+            return profemon[0]
+        except:
+            pass
+        # GET request with nothing passed in -> retrieve all profemon
         try:
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
