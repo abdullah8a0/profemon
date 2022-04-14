@@ -24,7 +24,8 @@ When a player is listening and finds an Id floating in the void, it bundles up t
 
 ## Andi
 
-- Show ID being scanned, request being handled by server, and professor and location being recorded in the database along with the player ID
+* Show ID being scanned, request being handled by server, and professor and location being recorded in the database along with the player ID ([Client Side](https://youtu.be/3OeNl7Hbbhg), [Server Side](https://youtu.be/cGOlrR3tlto))
+
 
 ## Heidi
 
