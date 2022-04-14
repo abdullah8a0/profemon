@@ -18,7 +18,7 @@ The server needs to know the ids of both of these players and log them.
 
 The diagram shows the overall protocol that allows the above to happen. One ESP acts as a broadcaster, screaming into the void using its SSID. The SSID has the form “Profemon{id}” as a standardized method of communication.
 
-![Overview of Handshake](/writeups/resources/overview-week1.jpg)
+![Overview of Handshake](https://imgur.com/BRl07R8)
 
 When a player is listening and finds an Id floating in the void, it bundles up the two ids and sends them to the server. The server treats this as a game initiation request and accepts the request unless someone beat P2 into pairing with P1.
 
