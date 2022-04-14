@@ -27,6 +27,7 @@ When a player is listening and finds an Id floating in the void, it bundles up t
 - Show ID being scanned, request being handled by server, and professor and location being recorded in the database along with the player ID
 
 ## Heidi
+[Demonstration video](https://youtu.be/0iA528hKyPs)
 
 ### State machine for client side 
 I implemented a state machine for the client side and added some rudimentary UI elements for each state to indicate which state the player is currently in. There are two main functionalities for the player: capturing a Profemon and battling. The player can transition from the `START` state either to the `CAPTURE` state or the `GAME` state. In the `GAME` state, the player progresses from `GAME_START`, `GAME_PAIR` (player pairs with the opponent), `GAME_SELECT` (player selects the Profemon for battle), `GAME_BATTLE` and `GAME_END`. 
@@ -34,7 +35,8 @@ I implemented a state machine for the client side and added some rudimentary UI 
 ### Selecting Profemon
 The main UI functionality implemented this week is the Profemon selection process, where the player selects the Profemon they want to use in the battle. The player can use the two buttons to navigate the list of Profemons they have, and long press the button to select the Profemon. For each Profemon, there is an image of the professor displayed in the center. Since local storage of these large image files seems to be easier to manage, we decided for now that images of the professors would be stored locally instead of pulled from the server, which presents some additional challenges of format conversions. 
 
-### Next steps (included for reference/central organization)
+### Next steps 
+*_included for internal reference/central organization_
 - Migrate the user input from using buttons to using the joystick. 
 - Integrate various components of the project that are already implemented into the core UI, i.e., pairing with another player, capturing Profemons, and querying the server for a captured Profemon list.
 - Replace the rudimentary text instructions with more appropriate UI elements at each state. 
