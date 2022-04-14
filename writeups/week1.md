@@ -33,7 +33,7 @@ When a player is listening and finds an Id floating in the void, it bundles up t
 ## Ivy
 
 - Unlisted but necessary: Get RC522 scanning and printing out UIDs
-  - Used MFRC522 library to read UID. Code from
+  - Used MFRC522 library to read UID. Code from esp32.io
 
 ```cpp
 void loop() {
