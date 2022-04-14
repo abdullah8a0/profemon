@@ -4,6 +4,24 @@
 
 - Show that two ESP32S2 can verify each other's existence via initiating a game.
 
+!(Video)[https://youtu.be/-b_8f32p_zI]
+
+### Overview:
+
+Each ESP is identified with a unique 4-character id.
+
+For a game to be initiated between two close proximity players (P1 and P2), 3 things need to happen:
+
+P2 needs to find P1’s id.
+P1 needs to find P2’s id.
+The server needs to know the ids of both of these players and log them.
+
+The diagram shows the overall protocol that allows the above to happen. One ESP acts as a broadcaster, screaming into the void using its SSID. The SSID has the form “Profemon{id}” as a standardized method of communication.
+
+![Overview of Handshake](https://drive.google.com/file/d/1IhUmKIPPkrWbb12-TSMUsvtpqTJ2sygx/view?usp=sharing)
+
+When a player is listening and finds an Id floating in the void, it bundles up the two ids and sends them to the server. The server treats this as a game initiation request and accepts the request unless someone beat P2 into pairing with P1.
+
 ## Andi
 
 - Show ID being scanned, request being handled by server, and professor and location being recorded in the database along with the player ID
