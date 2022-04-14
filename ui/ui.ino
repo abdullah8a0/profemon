@@ -70,15 +70,15 @@ void loop() {
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("  Press Button 1 \n  to capture.");
-        tft.println("  Press Button 2 \n  to battle.");
+        tft.println("Press Button 1 \nto battle.");
+        tft.println("Press Button 2 \nto capture.");
         old_state = state;
       }
       if (b1 == 1) {
-        state = CAPTURE;
+        state = GAME;
       }
       else if (b2 == 1) {
-        state = GAME;
+        state = CAPTURE;
       }
     break;
 
@@ -168,7 +168,7 @@ void loop() {
           else if (b1 == 2) {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.printf("  Selected Profemon\n  %s.", profemons[curr_idx]);
+            tft.printf("Selected Profemon\n  %s.", profemons[curr_idx]);
             delay(1000);
             game_state = GAME_BATTLE;
           }
@@ -179,7 +179,7 @@ void loop() {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Select your next attack.");
+            tft.println("Battle started!\nSelect your \nnext attack.");
             old_game_state = game_state;
           }
 
@@ -192,7 +192,7 @@ void loop() {
         case GAME_END:
           if(old_game_state != game_state) {
             tft.fillScreen(TFT_BLACK);
-            tft.setCursor(0, 0, 3);
+            tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("You won!");
             old_game_state = game_state;
