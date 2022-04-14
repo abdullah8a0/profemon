@@ -1,13 +1,16 @@
 from PIL import Image
 import io
 
-def jpg2bin(jpg_file):
-    with open(jpg_file, 'rb') as f:
-        return f.read()
+def jpg2bin(jpg_file, width=96, height=120):
+    img = Image.open(jpg_file)
+    img = img.resize((width, height))
+    output = io.BytesIO()
+    img.save(output, format='JPEG')
+    return output.getvalue()
 
 def jpg2bin_small(jpg_file, width=32, height=40):
     img = Image.open(jpg_file)
-    img.thumbnail((width, height))
+    img = img.resize((width, height))
     output = io.BytesIO()
     img.save(output, format='JPEG')
     return output.getvalue()
