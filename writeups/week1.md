@@ -18,7 +18,7 @@ The server needs to know the ids of both of these players and log them.
 
 The diagram shows the overall protocol that allows the above to happen. One ESP acts as a broadcaster, screaming into the void using its SSID. The SSID has the form “Profemon{id}” as a standardized method of communication.
 
-![Overview of Handshake](/writeups/resources/overview-week1.jpg)
+![Overview of Handshake](https://i.imgur.com/BRl07R8.jpeg)
 
 When a player is listening and finds an Id floating in the void, it bundles up the two ids and sends them to the server. The server treats this as a game initiation request and accepts the request unless someone beat P2 into pairing with P1.
 
@@ -28,8 +28,20 @@ When a player is listening and finds an Id floating in the void, it bundles up t
 
 
 ## Heidi
+[Demonstration video](https://youtu.be/0iA528hKyPs)
 
-- Demonstrate the selection process on the ESP, and show that the images are pulled from the server. The user would use either a button or a joystick to navigate the selection screen which contains one or two images of a professor on the screen at a time and be able to see through some UI element (an arrow or a box) which profemon is currently selected. Ideally, also integrate with requests to the server database to query which profemons a player has.
+### State machine for client side 
+I implemented a state machine for the client side and added some rudimentary UI elements for each state to indicate which state the player is currently in. There are two main functionalities for the player: capturing a Profemon and battling. The player can transition from the `START` state either to the `CAPTURE` state or the `GAME` state. In the `GAME` state, the player progresses from `GAME_START`, `GAME_PAIR` (player pairs with the opponent), `GAME_SELECT` (player selects the Profemon for battle), `GAME_BATTLE` and `GAME_END`. 
+
+### Selecting Profemon
+The main UI functionality implemented this week is the Profemon selection process, where the player selects the Profemon they want to use in the battle. The player can use the two buttons to navigate the list of Profemons they have, and long press the button to select the Profemon. For each Profemon, there is an image of the professor displayed in the center. Since local storage of these large image files seems to be easier to manage, we decided for now that images of the professors would be stored locally instead of pulled from the server, which presents some additional challenges of format conversions. 
+
+### Next steps 
+*_included for internal reference/central organization_
+- Migrate the user input from using buttons to using the joystick. 
+- Integrate various components of the project that are already implemented into the core UI, i.e., pairing with another player, capturing Profemons, and querying the server for a captured Profemon list.
+- Replace the rudimentary text instructions with more appropriate UI elements at each state. 
+- Implement a UI incorporating images of player Profemon and opponent Profemon for the battle process. 
 
 ## Ivy
 
