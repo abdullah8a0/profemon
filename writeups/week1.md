@@ -4,7 +4,7 @@
 
 - Show that two ESP32S2 can verify each other's existence via initiating a game.
 
-!(Video)[https://youtu.be/-b_8f32p_zI]
+[Video](https://youtu.be/-b_8f32p_zI)
 
 ### Overview:
 
@@ -18,7 +18,7 @@ The server needs to know the ids of both of these players and log them.
 
 The diagram shows the overall protocol that allows the above to happen. One ESP acts as a broadcaster, screaming into the void using its SSID. The SSID has the form “Profemon{id}” as a standardized method of communication.
 
-![Overview of Handshake](https://drive.google.com/file/d/1IhUmKIPPkrWbb12-TSMUsvtpqTJ2sygx/view?usp=sharing)
+![Overview of Handshake](/writeups/resources/overview-week1.jpg)
 
 When a player is listening and finds an Id floating in the void, it bundles up the two ids and sends them to the server. The server treats this as a game initiation request and accepts the request unless someone beat P2 into pairing with P1.
 
@@ -33,7 +33,7 @@ When a player is listening and finds an Id floating in the void, it bundles up t
 ## Ivy
 
 - Unlisted but necessary: Get RC522 scanning and printing out UIDs
-  - Used MFRC522 library to read UID. Code from
+  - Used MFRC522 library to read UID. Code from esp32.io
 
 ```cpp
 void loop() {
