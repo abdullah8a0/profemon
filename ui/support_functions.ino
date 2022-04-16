@@ -49,7 +49,7 @@ void do_http_request(char* host, char* request, char* response, uint16_t respons
     memset(response, 0, response_size);
     count = millis();
     while (client.available()) { //read out remaining text (body of response)
-      char_append(response, client.read(), OUT_BUFFER_SIZE);
+      char_append(response, client.read(), response_size);
     }
     if (serial) Serial.println(response);
     client.stop();

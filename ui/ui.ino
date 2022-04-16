@@ -40,16 +40,19 @@ char password[] = "";
 
 //Some constants and some resources:
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
-const uint16_t OUT_BUFFER_SIZE = 15000; //size of buffer to hold HTTP response
+const uint16_t OUT_BUFFER_SIZE = 200; //size of buffer to hold HTTP response
 // char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
+char request_buffer[100];
 
 // user related variables
+char* img_response;
 char user_name[15];
 char prof_names[10][25];
-uint8_t prof_images[5][4000];
+// uint8_t prof_images[5][4000]; // preassign memory for images
+uint8_t** prof_images; // dynamically assign memory
+uint16_t prof_images_size[10];
 char temp_img[4000];
-StaticJsonDocument<15000> json;
 
 uint8_t profemon_count = 0;
 int8_t curr_idx = 0;
@@ -145,9 +148,6 @@ void loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("Press Button 1 to start pairing with an opponent.");
             old_game_state = game_state;
-
-            // obtain profemon list from server
-            getProfemons();
           }
           if(b1 == 1) {
             game_state = GAME_PAIR;
@@ -172,6 +172,11 @@ void loop() {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
+            // obtain profemon list from server
+            tft.println("Retrieving your \nProfemons...");
+            getProfemons();
+            tft.fillScreen(TFT_BLACK);
+            tft.setCursor(0, 0, 2);
             tft.println("Select Profemon.");
             old_game_state = game_state;
             curr_idx = 0;
@@ -202,6 +207,10 @@ void loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("Battle started!\nSelect your \nnext attack.");
             old_game_state = game_state;
+
+            for (int i = 0; i < profemon_count; i++) {
+              free(prof_images[i]);
+            }
           }
 
           if(b1 == 1) {
@@ -230,29 +239,43 @@ void loop() {
 }
 
 void getProfemons() {
-  char request_buffer[100];
-  memset(response, 0, OUT_BUFFER_SIZE);
+  // get length of the response
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s&len=1 HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
+  img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
+  // get the images
+  memset(request_buffer, 0, sizeof(request_buffer));
   sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
-  Serial.println("hi");
-  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
-  Serial.println(response);
-  deserializeJson(json, response);
-  profemon_count = json["count"];
+  do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  StaticJsonDocument<500> doc;
+  deserializeJson(doc, img_response);
+  profemon_count = doc["count"];
   Serial.println(profemon_count);
+
+  for (int i=0; i < profemon_count; i++) {
+    strcpy(prof_names[i], doc["team"][i]["name"]);
+  }
+
+  prof_images = (uint8_t**)calloc(profemon_count, sizeof(uint8_t*));
   for (int i = 0; i < profemon_count; i++) {
-    strcpy(prof_names[i], json["team"][i]["name"]);
-    memset(temp_img, 0, sizeof(temp_img));
-    strcpy(temp_img, json["team"][i]["image"]);
+    strcpy(temp_img, doc["team"][i]["image"]);
+    prof_images_size[i] = doc["team"][i]["len"];
+    prof_images[i] = (uint8_t*)calloc(prof_images_size[i], sizeof(uint8_t));
     decode_base64((unsigned char*) temp_img, (unsigned char*) prof_images[i]);
   }
+
+  free(img_response);
 }
 
 
-void selectProfemon(uint8_t idx) {
-  drawArrayJpeg(prof_images[idx], sizeof(prof_images[idx]), 16, 20);
+void selectProfemon(uint8_t i) {
+  drawArrayJpeg(prof_images[i], prof_images_size[i], 16, 20);
   tft.setCursor(16, 142, 2);
-  tft.printf("%s        ", prof_names[idx]);
+  tft.printf("%s        ", prof_names[i]);
 }
 
 
