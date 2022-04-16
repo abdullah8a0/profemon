@@ -7,6 +7,7 @@
 #include <WiFiClientSecure.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
+#include "base64.hpp"
 
 #include "Button.h"
 
@@ -39,16 +40,43 @@ char password[] = "";
 
 //Some constants and some resources:
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
-const uint16_t OUT_BUFFER_SIZE = 1000; //size of buffer to hold HTTP response
-char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
+const uint16_t OUT_BUFFER_SIZE = 15000; //size of buffer to hold HTTP response
+// char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 
-char profemons[20][25];
+// user related variables
+char user_name[15];
+char prof_names[10][25];
+uint8_t prof_images[5][4000];
+char temp_img[4000];
+StaticJsonDocument<15000> json;
+
 uint8_t profemon_count = 0;
 int8_t curr_idx = 0;
 
 
 void setup() {
+  Serial.begin(115200); //for debugging if needed.
+  WiFi.begin(network, password); //attempt to connect to wifi
+  uint8_t count = 0; //count used for Wifi check times
+  Serial.print("Attempting to connect to ");
+  Serial.println(network);
+  while (WiFi.status() != WL_CONNECTED && count < 12) {
+    delay(500);
+    Serial.print(".");
+    count++;
+  }
+  delay(2000);
+  if (WiFi.isConnected()) { //if we connected then print our IP, Mac, and SSID we're on
+    Serial.println("CONNECTED!");
+    Serial.printf("%d:%d:%d:%d (%s) (%s)\n", WiFi.localIP()[3], WiFi.localIP()[2],
+                  WiFi.localIP()[1], WiFi.localIP()[0],
+                  WiFi.macAddress().c_str() , WiFi.SSID().c_str());    delay(500);
+  } else { //if we failed to connect just Try again.
+    Serial.println("Failed to Connect :/  Going to restart");
+    Serial.println(WiFi.status());
+    ESP.restart(); // restart the ESP (proper way)
+  }
   Serial.begin(115200);
   tft.begin();
   tft.setRotation(2);
@@ -73,6 +101,8 @@ void loop() {
         tft.println("Press Button 1 \nto battle.");
         tft.println("Press Button 2 \nto capture.");
         old_state = state;
+        // get username
+        strcpy(user_name, "andi");
       }
       if (b1 == 1) {
         state = GAME;
@@ -117,10 +147,7 @@ void loop() {
             old_game_state = game_state;
 
             // obtain profemon list from server
-            strcpy(profemons[0], "JoeSteinmeyer");
-            strcpy(profemons[1], "AnaBell");
-            strcpy(profemons[2], "AdamHartz");
-            profemon_count = 3;
+            getProfemons();
           }
           if(b1 == 1) {
             game_state = GAME_PAIR;
@@ -148,27 +175,21 @@ void loop() {
             tft.println("Select Profemon.");
             old_game_state = game_state;
             curr_idx = 0;
-            selectProfemon(profemons[curr_idx]);
+            selectProfemon(curr_idx);
           }
 
           if (b1 == 1) {
-            curr_idx++;
-            if (curr_idx >= profemon_count) {
-              curr_idx = 0;
-            }
-            selectProfemon(profemons[curr_idx]);
+            curr_idx = (curr_idx + 1) % profemon_count;
+            selectProfemon(curr_idx);
           }
           else if (b2 == 1) {
-            curr_idx--;
-            if (curr_idx < 0) {
-              curr_idx = profemon_count - 1;
-            }
-            selectProfemon(profemons[curr_idx]);
+            curr_idx = (curr_idx - 1 + profemon_count) % profemon_count;
+            selectProfemon(curr_idx);
           }
           else if (b1 == 2) {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.printf("Selected Profemon\n  %s.", profemons[curr_idx]);
+            tft.printf("Selected Profemon\n  %s.", prof_names[curr_idx]);
             delay(1000);
             game_state = GAME_BATTLE;
           }
@@ -208,18 +229,30 @@ void loop() {
 
 }
 
-void selectProfemon(char* name) {
-  if (strcmp(name, "JoeSteinmeyer") == 0) {
-    drawArrayJpeg(JoeSteinmeyer, sizeof(JoeSteinmeyer), 16, 20);
+void getProfemons() {
+  char request_buffer[100];
+  memset(response, 0, OUT_BUFFER_SIZE);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  Serial.println("hi");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+  Serial.println(response);
+  deserializeJson(json, response);
+  profemon_count = json["count"];
+  Serial.println(profemon_count);
+  for (int i = 0; i < profemon_count; i++) {
+    strcpy(prof_names[i], json["team"][i]["name"]);
+    memset(temp_img, 0, sizeof(temp_img));
+    strcpy(temp_img, json["team"][i]["image"]);
+    decode_base64((unsigned char*) temp_img, (unsigned char*) prof_images[i]);
   }
-  else if (strcmp(name, "AnaBell") == 0) {
-    drawArrayJpeg(AnaBell, sizeof(AnaBell), 16, 20);
-  }
-  else if (strcmp(name, "AdamHartz") == 0) {
-    drawArrayJpeg(AdamHartz, sizeof(AdamHartz), 16, 20);
-  }
+}
+
+
+void selectProfemon(uint8_t idx) {
+  drawArrayJpeg(prof_images[idx], sizeof(prof_images[idx]), 16, 20);
   tft.setCursor(16, 142, 2);
-  tft.printf("%s        ", name);
+  tft.printf("%s        ", prof_names[idx]);
 }
 
 
