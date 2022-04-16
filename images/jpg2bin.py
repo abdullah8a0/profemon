@@ -1,5 +1,6 @@
 from PIL import Image
 import io
+import os
 
 def jpg2bin(jpg_file, width=96, height=120):
     img = Image.open(jpg_file)
@@ -16,6 +17,7 @@ def jpg2bin_small(jpg_file, width=32, height=40):
     return output.getvalue()
 
 if __name__ == '__main__':
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     file = 'JoeSteinmeyer.jpg'
-    print(len(jpg2bin(file)))
-    print(len(jpg2bin_small(file)))
+    file_path = os.path.join(dir_path,file)
+    print(jpg2bin_small(file_path))
