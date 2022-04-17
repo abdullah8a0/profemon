@@ -22,7 +22,7 @@ def jpg2bin_small(jpg_file, width=32, height=40):
     img.save(output, format='JPEG')
     return output.getvalue()
 
-def get_profemon_name_image_pair(uid,c):
+def get_profemon_name_image_trio(uid,c):
     name = c.execute("SELECT name FROM profemon WHERE cipher = ?;",(uid,)).fetchone()
     name = name[0]
     #dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -33,7 +33,7 @@ def get_profemon_name_image_pair(uid,c):
     bigbin = jpg2bin(file_path)
     encodedbin = base64.standard_b64encode(bigbin)
     encodedbin = encodedbin.decode('ascii')
-    return {'name':name,'image':encodedbin}
+    return {'len':len(bigbin),'name':name,'image':encodedbin}
 
 def request_handler(request):
     try:
@@ -43,11 +43,16 @@ def request_handler(request):
         uids = c.execute("SELECT cipher FROM catch WHERE user = ?;",(user,)).fetchall()
         owned_profemons = []
         for uid in uids:
-            owned_profemons.append(get_profemon_name_image_pair(uid[0],c))
+            owned_profemons.append(get_profemon_name_image_trio(uid[0],c))
         dic = {"count":len(owned_profemons), "team":owned_profemons}
         js = json.dumps(dic, indent = 4)
         conn.commit()
         conn.close()
+        try:
+            is_len = request['values']['len']
+            return len(str(js))
+        except:
+            pass
         return js
     except ValueError or KeyError:
         return "418 I am a teapot"

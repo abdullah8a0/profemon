@@ -60,6 +60,7 @@ def request_handler(request):
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
             c.execute('''DELETE FROM catch WHERE user = ?;''', (erase,))
+            c.execute('''DELETE FROM catch WHERE cipher = ?;''', (erase,))
             conn.commit()
             conn.close()
             return "Deleted " + erase
