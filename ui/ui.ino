@@ -20,18 +20,19 @@ const int BUTTON2 = 39;
 Button button1(BUTTON1);
 Button button2(BUTTON2);
 
-uint8_t state = 0;
-uint8_t old_state = 1;
+
 const uint8_t START = 0;
 const uint8_t CAPTURE = 1;
 const uint8_t GAME = 2;
-uint8_t game_state = 0;
-uint8_t old_game_state = 1;
+uint8_t state = START;
+uint8_t old_state = GAME;
 const uint8_t GAME_START = 0;
 const uint8_t GAME_PAIR  = 1;
 const uint8_t GAME_SELECT = 2;
 const uint8_t GAME_BATTLE = 3;
 const uint8_t GAME_END = 4;
+uint8_t game_state = GAME_START;
+uint8_t old_game_state = GAME_END;
 
 
 char network[] = "MIT";
@@ -46,16 +47,24 @@ char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char request_buffer[100];
 
 // user related variables
+// selection
 char* img_response;
 char user_name[15];
 char prof_names[10][25];
-// uint8_t prof_images[5][4000]; // preassign memory for images
 uint8_t** prof_images; // dynamically assign memory
 uint16_t prof_images_size[10];
 char temp_img[4000];
-
 uint8_t profemon_count = 0;
 int8_t curr_idx = 0;
+
+// battle
+char moves[4][20];
+uint8_t cur_move = 0;
+uint8_t* player_image;
+uint8_t* opponent_image;
+uint8_t player_image_size;
+uint8_t opponent_image_size;
+
 
 
 void setup() {
@@ -89,6 +98,9 @@ void setup() {
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
+
+  state = GAME;
+  game_state = GAME_BATTLE;
 }
 
 void loop() {
@@ -202,16 +214,45 @@ void loop() {
 
         case GAME_BATTLE:
         if(old_game_state != game_state) {
+            old_game_state = game_state;
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Battle started!\nSelect your \nnext attack.");
+            tft.setTextColor(TFT_WHITE, TFT_BLACK);
+//             tft.println("Battle started!\nSelect your \nnext attack.");
             old_game_state = game_state;
-
+            // free memory used to store profemon images
             for (int i = 0; i < profemon_count; i++) {
               free(prof_images[i]);
             }
+            const uint8_t xm = 4; // width margin
+            const uint8_t ym = 4; // height margin
+            const uint8_t w = tft.width();
+            const uint8_t h = tft.height();
+
+            prepare_battle();
+
+            tft.fillRect(w-xm-32, ym, 32, 40, TFT_RED);
+            tft.fillRect(xm, h-ym-40, 32, 40, TFT_BLUE);
+
+            const uint8_t xb = 56; // attack box width
+            const uint8_t yb = 30; // attack box height
+            tft.drawRoundRect(xm, h/2-yb-2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(w-xm-xb, h/2-yb-2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(xm, h/2+2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(w-xm-xb, h/2+2, xb, yb, 2, TFT_WHITE);
+            const uint8_t xo = 4; // text offset x
+            const uint8_t yo = 6; // text offset y
+            tft.setCursor(xm+xo, h/2-yb-2+yo, 1);
+            tft.println("Attack1");
+            tft.setCursor(w-xm-xb+xo, h/2-yb-2+yo, 1);
+            tft.println("Attack2");
+            tft.setCursor(xm+xo, h/2+2+yo, 1);
+            tft.println("Attack3");
+            tft.setCursor(w-xm-xb+xo, h/2+2+yo, 1);
+            tft.println("Attack4");
           }
+
+
 
           if(b1 == 1) {
             game_state = GAME_END;
