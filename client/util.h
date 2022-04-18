@@ -68,6 +68,7 @@ public:
  *
  *  // in setup()
  *
+ *  analogReadeResolution(10);
  *  pinMode(VRx, INPUT);
  *  pinMode(VRy, INPUT);
  *  pinMode(Sw, INPUT_PULLUP);
