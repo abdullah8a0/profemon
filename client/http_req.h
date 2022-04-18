@@ -12,6 +12,18 @@ extern WiFiClient client2;      // global WiFiClient Secure object
 */
 extern char *CA_CERT;
 
+extern const uint16_t RESPONSE_TIMEOUT;
+extern const uint16_t IN_BUFFER_SIZE;  // size of buffer to hold HTTP request
+extern const uint16_t OUT_BUFFER_SIZE; // size of buffer to hold HTTP response
+extern const uint16_t JSON_BODY_SIZE;
+// #define RESPONSE_TIMEOUT 6000
+// #define IN_BUFFER_SIZE 5000  // size of buffer to hold HTTP request
+// #define OUT_BUFFER_SIZE 1000 // size of buffer to hold HTTP response
+// #define JSON_BODY_SIZE 3000
+extern char request[];
+extern char response[]; // char array buffer to hold HTTP request
+extern char json_body[];
+extern char request_body[];
 /*----------------------------------
    char_append Function:
    Arguments:
