@@ -145,12 +145,12 @@ joystick_direction Joystick::update()
 {
 
     read();
-    Serial.print("VRx_val: ");
-    Serial.print(VRx_val);
-    Serial.print(" VRy_val: ");
-    Serial.print(VRy_val);
-    Serial.print(" Sw_val: ");
-    Serial.println(Sw_val);
+    // Serial.print("VRx_val: ");
+    // Serial.print(VRx_val);
+    // Serial.print(" VRy_val: ");
+    // Serial.print(VRy_val);
+    // Serial.print(" Sw_val: ");
+    // Serial.println(Sw_val);
 
     joystick_direction dir;
 
@@ -178,13 +178,22 @@ joystick_direction Joystick::update()
     {
         dir = NONE;
     }
-    if (millis() - previous_joystick_direction_output_time < JOYSTICK_UPDATE_DELAY)
+
+    if (_joystick_mode == 1)
     {
-        return NONE;
+
+        if (millis() - previous_joystick_direction_output_time < JOYSTICK_UPDATE_DELAY)
+        {
+            return NONE;
+        }
+        else
+        {
+            previous_joystick_direction_output_time = millis();
+            return dir;
+        }
     }
-    else
+    else if (_joystick_mode == 0)
     {
-        previous_joystick_direction_output_time = millis();
         return dir;
     }
 }
