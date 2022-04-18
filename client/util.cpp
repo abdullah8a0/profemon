@@ -105,36 +105,18 @@ int Button::update()
     return flag;
 }
 
-Joystick::Joystick(int VRx, int VRy, int Sw, int button_mode)
+void Joystick::read()
 {
-    button_mode = button_mode;
-    VRx_val = 0;
-    VRy_val = 0;
-    Sw_val = 0;
-    VRx = VRx;
-    VRy = VRy;
-    Sw = Sw;
-
-    if (button_mode != 0 && button_mode != 1)
+    VRx_val = map(analogRead(_VRx), 0, 1023, -512, 512);
+    VRy_val = map(analogRead(_VRy), 0, 1023, -512, 512);
+    if (_button_mode == 1)
     {
-        Serial.println("Invalid button mode");
-        delay(500);
-        exit(-1);
-    }
-    button = Button(Sw);
-}
-Joystick::read()
-{
-    VRx_val = map(analogRead(VRx), 0, 1023, -512, 512);
-    VRy_val = map(analogRead(VRy), 0, 1023, -512, 512);
-    if (button_mode == 1)
-    {
-        int button_pressed = !digitalRead(Sw);
-        if (button_pressed > previous_button_pressed)
+        int button_pressed = !digitalRead(_Sw);
+        if (button_pressed > previous_button_pressed_time)
         {
             Sw_val = 1;
         }
-        else if (button_pressed < previous_button_pressed)
+        else if (button_pressed < previous_button_pressed_time)
         {
             Sw_val = -1;
         }
@@ -142,9 +124,9 @@ Joystick::read()
         {
             Sw_val = 0;
         }
-        previous_button_pressed = button_pressed;
+        previous_button_pressed_time = button_pressed;
     }
-    else if (button_mode == 0)
+    else if (_button_mode == 0)
     {
         Sw_val = button.update();
     }
@@ -159,47 +141,50 @@ Joystick::read()
  *
  * @return the direction of the Joystick
  */
-Joystick::update()
+joystick_direction Joystick::update()
 {
+
     read();
+    Serial.print("VRx_val: ");
+    Serial.print(VRx_val);
+    Serial.print(" VRy_val: ");
+    Serial.print(VRy_val);
+    Serial.print(" Sw_val: ");
+    Serial.println(Sw_val);
+
+    joystick_direction dir;
+
     if (abs(VRx_val) < JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        return NONE;
+        dir = NONE;
     }
     else if (VRx_val < -JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        return LEFT;
+        dir = JOYSTICK_RIGHT;
     }
     else if (VRx_val > JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        return RIGHT;
-    }
-    else if (VRy_val > JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
-    {
-        return DOWN;
+        dir = JOYSTICK_LEFT;
     }
     else if (VRy_val < -JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
-        return UP;
+        dir = JOYSTICK_DOWN;
     }
-    else if (VRx_val < -JOYSTICK_DEADZONE && VRy_val > JOYSTICK_DEADZONE)
+    else if (VRy_val > JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
-        return UP_LEFT;
-    }
-    else if (VRx_val > JOYSTICK_DEADZONE && VRy_val > JOYSTICK_DEADZONE)
-    {
-        return UP_RIGHT;
-    }
-    else if (VRx_val < -JOYSTICK_DEADZONE && VRy_val < -JOYSTICK_DEADZONE)
-    {
-        return DOWN_LEFT;
-    }
-    else if (VRx_val > JOYSTICK_DEADZONE && VRy_val < -JOYSTICK_DEADZONE)
-    {
-        return DOWN_RIGHT;
+        dir = JOYSTICK_UP;
     }
     else
     {
+        dir = NONE;
+    }
+    if (millis() - previous_joystick_direction_output_time < JOYSTICK_UPDATE_DELAY)
+    {
         return NONE;
+    }
+    else
+    {
+        previous_joystick_direction_output_time = millis();
+        return dir;
     }
 }
