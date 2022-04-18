@@ -7,6 +7,7 @@
 #include <WiFiClientSecure.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
+#include "base64.hpp"
 
 #include "Button.h"
 
@@ -19,18 +20,19 @@ const int BUTTON2 = 39;
 Button button1(BUTTON1);
 Button button2(BUTTON2);
 
-uint8_t state = 0;
-uint8_t old_state = 1;
+
 const uint8_t START = 0;
 const uint8_t CAPTURE = 1;
 const uint8_t GAME = 2;
-uint8_t game_state = 0;
-uint8_t old_game_state = 1;
+uint8_t state = START;
+uint8_t old_state = GAME;
 const uint8_t GAME_START = 0;
 const uint8_t GAME_PAIR  = 1;
 const uint8_t GAME_SELECT = 2;
 const uint8_t GAME_BATTLE = 3;
 const uint8_t GAME_END = 4;
+uint8_t game_state = GAME_START;
+uint8_t old_game_state = GAME_END;
 
 
 char network[] = "MIT";
@@ -39,16 +41,54 @@ char password[] = "";
 
 //Some constants and some resources:
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
-const uint16_t OUT_BUFFER_SIZE = 1000; //size of buffer to hold HTTP response
-char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
+const uint16_t OUT_BUFFER_SIZE = 200; //size of buffer to hold HTTP response
+// char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
+char request_buffer[100];
 
-char profemons[20][25];
+// user related variables
+// selection
+char* img_response;
+char user_name[15];
+char prof_names[10][25];
+uint8_t** prof_images; // dynamically assign memory
+uint16_t prof_images_size[10];
+char temp_img[4000];
 uint8_t profemon_count = 0;
 int8_t curr_idx = 0;
 
+// battle
+char moves[4][20];
+uint8_t cur_move = 0;
+uint8_t* player_image;
+uint8_t* opponent_image;
+uint8_t player_image_size;
+uint8_t opponent_image_size;
+
+
 
 void setup() {
+  Serial.begin(115200); //for debugging if needed.
+  WiFi.begin(network, password); //attempt to connect to wifi
+  uint8_t count = 0; //count used for Wifi check times
+  Serial.print("Attempting to connect to ");
+  Serial.println(network);
+  while (WiFi.status() != WL_CONNECTED && count < 12) {
+    delay(500);
+    Serial.print(".");
+    count++;
+  }
+  delay(2000);
+  if (WiFi.isConnected()) { //if we connected then print our IP, Mac, and SSID we're on
+    Serial.println("CONNECTED!");
+    Serial.printf("%d:%d:%d:%d (%s) (%s)\n", WiFi.localIP()[3], WiFi.localIP()[2],
+                  WiFi.localIP()[1], WiFi.localIP()[0],
+                  WiFi.macAddress().c_str() , WiFi.SSID().c_str());    delay(500);
+  } else { //if we failed to connect just Try again.
+    Serial.println("Failed to Connect :/  Going to restart");
+    Serial.println(WiFi.status());
+    ESP.restart(); // restart the ESP (proper way)
+  }
   Serial.begin(115200);
   tft.begin();
   tft.setRotation(2);
@@ -58,6 +98,9 @@ void setup() {
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
+
+  state = GAME;
+  game_state = GAME_BATTLE;
 }
 
 void loop() {
@@ -73,6 +116,8 @@ void loop() {
         tft.println("Press Button 1 \nto battle.");
         tft.println("Press Button 2 \nto capture.");
         old_state = state;
+        // get username
+        strcpy(user_name, "andi");
       }
       if (b1 == 1) {
         state = GAME;
@@ -115,12 +160,6 @@ void loop() {
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
             tft.println("Press Button 1 to start pairing with an opponent.");
             old_game_state = game_state;
-
-            // obtain profemon list from server
-            strcpy(profemons[0], "JoeSteinmeyer");
-            strcpy(profemons[1], "AnaBell");
-            strcpy(profemons[2], "AdamHartz");
-            profemon_count = 3;
           }
           if(b1 == 1) {
             game_state = GAME_PAIR;
@@ -145,30 +184,29 @@ void loop() {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
+            // obtain profemon list from server
+            tft.println("Retrieving your \nProfemons...");
+            getProfemons();
+            tft.fillScreen(TFT_BLACK);
+            tft.setCursor(0, 0, 2);
             tft.println("Select Profemon.");
             old_game_state = game_state;
             curr_idx = 0;
-            selectProfemon(profemons[curr_idx]);
+            selectProfemon(curr_idx);
           }
 
           if (b1 == 1) {
-            curr_idx++;
-            if (curr_idx >= profemon_count) {
-              curr_idx = 0;
-            }
-            selectProfemon(profemons[curr_idx]);
+            curr_idx = (curr_idx + 1) % profemon_count;
+            selectProfemon(curr_idx);
           }
           else if (b2 == 1) {
-            curr_idx--;
-            if (curr_idx < 0) {
-              curr_idx = profemon_count - 1;
-            }
-            selectProfemon(profemons[curr_idx]);
+            curr_idx = (curr_idx - 1 + profemon_count) % profemon_count;
+            selectProfemon(curr_idx);
           }
           else if (b1 == 2) {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.printf("Selected Profemon\n  %s.", profemons[curr_idx]);
+            tft.printf("Selected Profemon\n  %s.", prof_names[curr_idx]);
             delay(1000);
             game_state = GAME_BATTLE;
           }
@@ -176,12 +214,45 @@ void loop() {
 
         case GAME_BATTLE:
         if(old_game_state != game_state) {
+            old_game_state = game_state;
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Battle started!\nSelect your \nnext attack.");
+            tft.setTextColor(TFT_WHITE, TFT_BLACK);
+//             tft.println("Battle started!\nSelect your \nnext attack.");
             old_game_state = game_state;
+            // free memory used to store profemon images
+            for (int i = 0; i < profemon_count; i++) {
+              free(prof_images[i]);
+            }
+            const uint8_t xm = 4; // width margin
+            const uint8_t ym = 4; // height margin
+            const uint8_t w = tft.width();
+            const uint8_t h = tft.height();
+
+            prepare_battle();
+
+            tft.fillRect(w-xm-32, ym, 32, 40, TFT_RED);
+            tft.fillRect(xm, h-ym-40, 32, 40, TFT_BLUE);
+
+            const uint8_t xb = 56; // attack box width
+            const uint8_t yb = 30; // attack box height
+            tft.drawRoundRect(xm, h/2-yb-2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(w-xm-xb, h/2-yb-2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(xm, h/2+2, xb, yb, 2, TFT_WHITE);
+            tft.drawRoundRect(w-xm-xb, h/2+2, xb, yb, 2, TFT_WHITE);
+            const uint8_t xo = 4; // text offset x
+            const uint8_t yo = 6; // text offset y
+            tft.setCursor(xm+xo, h/2-yb-2+yo, 1);
+            tft.println("Attack1");
+            tft.setCursor(w-xm-xb+xo, h/2-yb-2+yo, 1);
+            tft.println("Attack2");
+            tft.setCursor(xm+xo, h/2+2+yo, 1);
+            tft.println("Attack3");
+            tft.setCursor(w-xm-xb+xo, h/2+2+yo, 1);
+            tft.println("Attack4");
           }
+
+
 
           if(b1 == 1) {
             game_state = GAME_END;
@@ -208,18 +279,44 @@ void loop() {
 
 }
 
-void selectProfemon(char* name) {
-  if (strcmp(name, "JoeSteinmeyer") == 0) {
-    drawArrayJpeg(JoeSteinmeyer, sizeof(JoeSteinmeyer), 16, 20);
+void getProfemons() {
+  // get length of the response
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s&len=1 HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
+  img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
+  // get the images
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  StaticJsonDocument<500> doc;
+  deserializeJson(doc, img_response);
+  profemon_count = doc["count"];
+  Serial.println(profemon_count);
+
+  for (int i=0; i < profemon_count; i++) {
+    strcpy(prof_names[i], doc["team"][i]["name"]);
   }
-  else if (strcmp(name, "AnaBell") == 0) {
-    drawArrayJpeg(AnaBell, sizeof(AnaBell), 16, 20);
+
+  prof_images = (uint8_t**)calloc(profemon_count, sizeof(uint8_t*));
+  for (int i = 0; i < profemon_count; i++) {
+    strcpy(temp_img, doc["team"][i]["image"]);
+    prof_images_size[i] = doc["team"][i]["len"];
+    prof_images[i] = (uint8_t*)calloc(prof_images_size[i], sizeof(uint8_t));
+    decode_base64((unsigned char*) temp_img, (unsigned char*) prof_images[i]);
   }
-  else if (strcmp(name, "AdamHartz") == 0) {
-    drawArrayJpeg(AdamHartz, sizeof(AdamHartz), 16, 20);
-  }
+
+  free(img_response);
+}
+
+
+void selectProfemon(uint8_t i) {
+  drawArrayJpeg(prof_images[i], prof_images_size[i], 16, 20);
   tft.setCursor(16, 142, 2);
-  tft.printf("%s        ", name);
+  tft.printf("%s        ", prof_names[i]);
 }
 
 

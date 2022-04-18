@@ -55,11 +55,26 @@ def get_area(point_coord,locations):
 
 def request_handler(request):
     if request["method"] == "GET": # Not changed. Please don't use GET request.
-        lat = 0
-        lon = 0
         try:
-            lat = float(request['form']['lat'])
-            lon = float(request['form']['lon'])
+            erase = request['values']['erase']
+            conn = sqlite3.connect(profemon_db)
+            c = conn.cursor()
+            c.execute('''DELETE FROM catch WHERE user = ?;''', (erase,))
+            c.execute('''DELETE FROM catch WHERE cipher = ?;''', (erase,))
+            conn.commit()
+            conn.close()
+            return "Deleted " + erase
+        except Exception as e:
+            pass
+        try:
+            conn = sqlite3.connect(profemon_db)
+            c = conn.cursor()
+            #c.execute('''DELETE FROM catch WHERE profemon_name = 'AndiLiuTheLegendary' OR profemon_name = 'AndiLiu';''')
+            c.execute('''CREATE TABLE IF NOT EXISTS catch (user text, cipher text, lat float, lon float, time timestamp, profemon_name text);''')
+            database = c.execute('''SELECT * FROM catch;''').fetchall()
+            conn.commit()
+            conn.close()
+            return database
         except Exception as e:
             return e
 
