@@ -9,14 +9,20 @@
 #include <ArduinoJson.h>
 #include "base64.hpp"
 
-#include "Button.h"
+#include "util.h"
+
+// #include "Button.h"
 
 TFT_eSPI tft = TFT_eSPI();
-const int SCREEN_HEIGHT = 160;
-const int SCREEN_WIDTH = 128;
-const int BUTTON1 = 45;
-const int BUTTON2 = 39;
+const uint8_t SCREEN_HEIGHT = 160;
+const uint8_t SCREEN_WIDTH = 128;
+const uint8_t BUTTON1 = 45;
+const uint8_t BUTTON2 = 39;
 
+const uint8_t VRx = 5;
+const uint8_t VRy = 6;
+const uint8_t Sw = 12;
+Joystick joystick(VRx, VRy, Sw, 0, 1);
 Button button1(BUTTON1);
 Button button2(BUTTON2);
 
@@ -130,30 +136,33 @@ void setup() {
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
 
-  state = GAME;
-  game_state = GAME_WAIT;
+  analogReadResolution(10);
+  pinMode(VRx, INPUT);
+  pinMode(VRy, INPUT);
+  pinMode(Sw, INPUT_PULLUP);
 }
 
 void loop() {
-  int b1 = button1.update();
-  int b2 = button2.update();
-
+//   int b1 = button1.update();
+//   int b2 = button2.update();
+  joystick_direction joydir = joystick.update();
+  int joyb = joystick.Sw_val;
   switch(state) {
     case START:
       if(old_state != state) {
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("Press Button 1 \nto battle.");
-        tft.println("Press Button 2 \nto capture.");
+        tft.println("Joystick left \nto battle.");
+        tft.println("Joystick right \nto capture.");
         old_state = state;
         // get username
         strcpy(user_name, "andi");
       }
-      if (b1 == 1) {
+      if (joydir == JOYSTICK_LEFT) {
         state = GAME;
       }
-      else if (b2 == 1) {
+      else if (joydir == JOYSTICK_RIGHT) {
         state = CAPTURE;
       }
     break;
@@ -166,10 +175,7 @@ void loop() {
         tft.println("Scan ID to capture.");
         old_state = state;
       }
-      if (b1 == 1) {
-        state = START;
-      }
-      else if (b2 == 1) {
+      if (joyb == 1) {
         state = START;
       }
     break;
@@ -192,7 +198,7 @@ void loop() {
             tft.println("Press Button 1 to start pairing with an opponent.");
             old_game_state = game_state;
           }
-          if(b1 == 1) {
+          if(joyb == 1) {
             game_state = GAME_PAIR;
           }
         break;
@@ -205,7 +211,7 @@ void loop() {
             tft.println("Pairing...");
             old_game_state = game_state;
           }
-          if(b1 == 1) {
+          if(joyb == 1) {
             game_state = GAME_SELECT;
           }
         break;
@@ -226,15 +232,15 @@ void loop() {
             select_profemon(curr_idx);
           }
 
-          if (b1 == 1) {
+          if (joydir == JOYSTICK_RIGHT) {
             curr_idx = (curr_idx + 1) % profemon_count;
             select_profemon(curr_idx);
           }
-          else if (b2 == 1) {
+          else if (joydir == JOYSTICK_LEFT) {
             curr_idx = (curr_idx - 1 + profemon_count) % profemon_count;
             select_profemon(curr_idx);
           }
-          else if (b1 == 2) {
+          else if (joyb == 1) {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
             tft.printf("Selected Profemon\n  %s.", prof_names[curr_idx]);
@@ -287,15 +293,15 @@ void loop() {
                 select_move(curr_move);
                 old_battle_state = battle_state;
               }
-              if (b1 == 1) {
+              if (joydir == JOYSTICK_RIGHT) {
                 curr_move = (curr_move + 1) % 4;
                 select_move(curr_move);
               }
-              else if (b2 == 1) {
+              else if (joydir == JOYSTICK_LEFT) {
                 curr_move = (curr_move - 1 + 4) % 4;
                 select_move(curr_move);
               }
-              else if (b1 == 2) {
+              else if (joyb == 1) {
                 send_move(curr_move);
                 if (battle_step()) {
                   game_state = BATTLE_UPDATE;
@@ -360,7 +366,7 @@ void loop() {
             free(opponent_image);
           }
 
-          if(b1 == 1) {
+          if(joyb == 1) {
             state = START;
           }
         break;
