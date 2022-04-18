@@ -26,5 +26,4 @@ def request_handler(request):
         return str(game_id)
 
 def generate_ids(p1,p2):
-    # game id = p1 + p2 + time
-    return str(p1) + str(p2) + str(time.time())
+    return str(p1) + str(p2) + str(int(time.time()))

@@ -30,7 +30,7 @@ bool connect_wifi()
 }
 
 bool broadcast(char *my_id)
-{
+{ // TODO: boadcast while syncing. stop boradcasting if sync is done.
 
     char *ssid = (char *)malloc(sizeof(char) * 13);
     strcpy(ssid, "Profemon");
@@ -115,8 +115,6 @@ bool listen(char *other_id)
         Serial.println(" networks found");
         for (int i = 0; i < n; ++i)
         {
-            // Serial.printf("%d: %s, Ch:%d (%ddBm) %s ", i + 1, WiFi.SSID(i).c_str(), WiFi.channel(i), WiFi.RSSI(i), WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "open\n" : "\n");
-            // if the SSID starts with Profemon, then connect to it
             Serial.printf("%s\n", WiFi.SSID(i).c_str());
             if (strncmp(WiFi.SSID(i).c_str(), "Profemon", 8) == 0)
             {
@@ -124,36 +122,13 @@ bool listen(char *other_id)
                 strcpy(that_ssid, WiFi.SSID(i).c_str());
 
                 Serial.printf("Connecting to Profemon: %s\n", that_ssid);
-                // WiFi.begin(that_ssid, wifi_pass);
-                // uint8_t count = 0;
-                // while (WiFi.status() != WL_CONNECTED && count < 12)
-                // {
-                //     delay(500);
-                //     Serial.print(".");
-                //     count++;
-                // }
-                // if (WiFi.isConnected())
-                // {
-                //     Serial.println("CONNECTED!");
-                //     // get the id from the SSID
                 for (int i = 8; i < 13; i++)
                 {
                     other_id[i - 8] = that_ssid[i];
                 }
-                // Serial.printf("%d:%d:%d:%d (%s) (%s)\n", WiFi.localIP()[3], WiFi.localIP()[2], WiFi.localIP()[1], WiFi.localIP()[0], WiFi.macAddress().c_str(), WiFi.SSID().c_str());
-                // delay(500);
                 free(that_ssid);
                 return true;
-                // }
-                // else
-                // {
-                //     Serial.println("Failed to Connect :/  Going to restart");
-                //     Serial.println(WiFi.status());
-                //     // ESP.restart(); // restart the ESP (proper way)
-                // }
             }
-
-            // Serial.println("");
         }
     }
     return false;
@@ -197,21 +172,4 @@ void sync_ids(char *my_id, char *game_id)
     {
         game_id[i] = response[i];
     }
-}
-
-void sync_ids(char *my_id, char *other_id)
-{
-    char body[100];                                  // for body
-    sprintf(body, "me=%s&them=%s", my_id, other_id); // generate body, posting to User, 1 step
-    int body_len = strlen(body);                     // calculate body length (for header reporting)
-    sprintf(request, "POST http://608dev-2.net/sandbox/sc/team5/sync.py HTTP/1.1\r\n");
-    strcat(request, "Host: 608dev-2.net\r\n");
-    strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
-    sprintf(request + strlen(request), "Content-Length: %d\r\n", body_len); // append string formatted to end of request buffer
-    strcat(request, "\r\n");                                                // new line from header to body
-    strcat(request, body);                                                  // body
-    strcat(request, "\r\n");                                                // new line
-    Serial.println(request);
-    do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
-    Serial.println(response); // viewable in Serial Terminal
 }
