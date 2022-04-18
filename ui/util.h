@@ -32,9 +32,6 @@ enum button_state
  *  flag = 1 means a short press happened
  *  flag = 2 means a long press happened (>1 second)
  *
- *
- * edit
- * edit again
  *  The button is debounced by a 10ms delay.
  *  Most of the time, you only care to check if flag > 0.
  *
@@ -67,8 +64,7 @@ public:
  *  Joystick joystick(VRx, VRy, Sw, 0, 1);
  *
  *  // in setup()
- *
- *  analogReadeResolution(10);
+ *  analogReadResolution(10);
  *  pinMode(VRx, INPUT);
  *  pinMode(VRy, INPUT);
  *  pinMode(Sw, INPUT_PULLUP);
@@ -85,7 +81,7 @@ public:
  * @param Sw the pin the joystick is connected to for the button
  * @param button_mode if 1, button will return 1 during rising edge, -1 during falling edge
  *                    if 0, button is a normal button
- * @param joystick_mode if 1, joystick will return direction every JOYSTICK_DELAY ms
+ * @param joystick_mode if 1, joystick will return direction every JOYSTICK_UPDATE_DELAY ms
  *                     if 0, joystick is a normal joystick
  */
 class Joystick
