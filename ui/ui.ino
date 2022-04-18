@@ -304,9 +304,9 @@ void loop() {
               else if (joyb == 1) {
                 send_move(curr_move);
                 if (battle_step()) {
-                  game_state = BATTLE_UPDATE;
+                  battle_state = BATTLE_UPDATE;
                 } else {
-                  game_state = BATTLE_WAIT;
+                  battle_state = BATTLE_WAIT;
                 }
               }
             break;
@@ -318,9 +318,9 @@ void loop() {
               }
               if (millis() - timer > 2000) {
                 if (battle_step()) {
-                  game_state = BATTLE_UPDATE;
+                  battle_state = BATTLE_UPDATE;
                 } else {
-                  game_state = BATTLE_WAIT;
+                  battle_state = BATTLE_WAIT;
                   timer = millis();
                 }
               }
@@ -534,6 +534,7 @@ bool battle_step() {
   opponent_new_hp = doc[1]["opponent_hp"];
   strcpy(display_text[0], doc[0]["display_text"]);
   strcpy(display_text[1], doc[1]["display_text"]);
+  return true;
 }
 
 
