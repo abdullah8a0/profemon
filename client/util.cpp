@@ -145,12 +145,12 @@ joystick_direction Joystick::update()
 {
 
     read();
-    // Serial.print("VRx_val: ");
-    // Serial.print(VRx_val);
-    // Serial.print(" VRy_val: ");
-    // Serial.print(VRy_val);
-    // Serial.print(" Sw_val: ");
-    // Serial.println(Sw_val);
+     Serial.print("VRx_val: ");
+     Serial.print(VRx_val);
+     Serial.print(" VRy_val: ");
+     Serial.print(VRy_val);
+     Serial.print(" Sw_val: ");
+     Serial.println(Sw_val);
 
     joystick_direction dir;
 

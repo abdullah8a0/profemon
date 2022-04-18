@@ -54,11 +54,11 @@ char password[] = "";
 //Some constants and some resources:
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
 const uint16_t OUT_BUFFER_SIZE = 200; //size of buffer to hold HTTP response
-// char old_response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char request_buffer[100];
 
 // game related variables
+StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
 uint32_t timer;
 
@@ -376,6 +376,46 @@ void loop() {
 
 }
 
+///////// GAME_SELECT //////////
+
+void get_profemons() {
+  // get length of the response
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s&len=true HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
+  img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
+  // get the images
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  deserializeJson(doc, img_response);
+  profemon_count = doc["count"];
+
+  for (int i=0; i < profemon_count; i++) {
+    strcpy(prof_names[i], doc["team"][i]["name"]);
+  }
+
+  prof_images = (uint8_t**)calloc(profemon_count, sizeof(uint8_t*));
+  for (int i = 0; i < profemon_count; i++) {
+    strcpy(temp_img, doc["team"][i]["image"]);
+    prof_images_size[i] = doc["team"][i]["len"];
+    prof_images[i] = (uint8_t*)calloc(prof_images_size[i], sizeof(uint8_t));
+    decode_base64((unsigned char*) temp_img, (unsigned char*) prof_images[i]);
+  }
+
+  free(img_response);
+}
+
+
+void select_profemon(uint8_t i) {
+  drawArrayJpeg(prof_images[i], prof_images_size[i], 16, 20);
+  tft.setCursor(16, 142, 2);
+  tft.printf("%s        ", prof_names[i]);
+}
+
 void send_selection(uint8_t i) {
   memset(request_buffer, 0, sizeof(request_buffer));
   sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%s&game_id=%d&profemon=%s HTTP/1.1\r\n", user_name, game_id, prof_names[i]);
@@ -383,6 +423,8 @@ void send_selection(uint8_t i) {
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   Serial.println(response);
 }
+
+///////// GAME_BATTLE //////////
 
 bool battle_init() {
   memset(request_buffer, 0, sizeof(request_buffer));
@@ -398,9 +440,7 @@ bool battle_init() {
   sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%s&game_id=%d&init=true HTTP/1.1\r\n", user_name, game_id);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-  StaticJsonDocument<500> doc;
   deserializeJson(doc, img_response);
-  delay(1000);
   // initialize hp
   player_max_hp = doc["player"]["max_hp"];
   opponent_max_hp = doc["opponent"]["max_hp"];
@@ -413,7 +453,6 @@ bool battle_init() {
   player_hp = player_max_hp;
   opponent_hp = opponent_max_hp;
   // get player moves
-  delay(2000);
   for (int i = 0; i < 4; i++) {
     strcpy(player_moves[i], doc["player"]["moves"][i]);
   }
@@ -468,56 +507,33 @@ void display_battle() {
   // draw images
   drawArrayJpeg(opponent_image, opponent_image_size, w-xm-img_w, ym);
   drawArrayJpeg(player_image, player_image_size, xm, h-ym-img_h);
-
   display_hp();
   select_move(curr_move);
 }
 
-void send_move(uint8_t idx) {
-  return;
+void send_move(uint8_t i) {
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%s&game_id=%d&move=%s HTTP/1.1\r\n", user_name, game_id, player_moves[i]);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  Serial.println(response);
 }
 
 bool battle_step() {
-  return false;
-}
-
-void get_profemons() {
-  // get length of the response
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s&len=true HTTP/1.1\r\n", user_name);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%s&game_id=%d&init=true&len=true HTTP/1.1\r\n", user_name, game_id);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-  uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
-  img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
-  // get the images
-  memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
-  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
-  do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-  StaticJsonDocument<500> doc;
+  if (strcmp(response, "wait\n") == 0) {
+    return false;
+  }
   deserializeJson(doc, img_response);
-  profemon_count = doc["count"];
-
-  for (int i=0; i < profemon_count; i++) {
-    strcpy(prof_names[i], doc["team"][i]["name"]);
-  }
-
-  prof_images = (uint8_t**)calloc(profemon_count, sizeof(uint8_t*));
-  for (int i = 0; i < profemon_count; i++) {
-    strcpy(temp_img, doc["team"][i]["image"]);
-    prof_images_size[i] = doc["team"][i]["len"];
-    prof_images[i] = (uint8_t*)calloc(prof_images_size[i], sizeof(uint8_t));
-    decode_base64((unsigned char*) temp_img, (unsigned char*) prof_images[i]);
-  }
-
-  free(img_response);
-}
-
-
-void select_profemon(uint8_t i) {
-  drawArrayJpeg(prof_images[i], prof_images_size[i], 16, 20);
-  tft.setCursor(16, 142, 2);
-  tft.printf("%s        ", prof_names[i]);
+  player_hp = doc[0]["player_hp"];
+  opponent_hp = doc[0]["opponent_hp"];
+  player_new_hp = doc[1]["player_hp"];
+  opponent_new_hp = doc[1]["opponent_hp"];
+  strcpy(display_text[0], doc[0]["display_text"]);
+  strcpy(display_text[1], doc[1]["display_text"]);
 }
 
 
