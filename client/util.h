@@ -7,6 +7,18 @@
 #define JOYSTICK_DEADZONE 400
 #define JOYSTICK_UPDATE_DELAY 500
 
+// extern const uint16_t RESPONSE_TIMEOUT;
+// extern const uint16_t IN_BUFFER_SIZE;  // size of buffer to hold HTTP request
+// extern const uint16_t OUT_BUFFER_SIZE; // size of buffer to hold HTTP response
+// extern const uint16_t JSON_BODY_SIZE;
+#define RESPONSE_TIMEOUT 6000
+#define IN_BUFFER_SIZE 5000  // size of buffer to hold HTTP request
+#define OUT_BUFFER_SIZE 1000 // size of buffer to hold HTTP response
+#define JSON_BODY_SIZE 3000
+extern char request[IN_BUFFER_SIZE];
+extern char response[OUT_BUFFER_SIZE]; // char array buffer to hold HTTP request
+extern char json_body[JSON_BODY_SIZE];
+extern char request_body[JSON_BODY_SIZE];
 enum joystick_direction
 {
     NONE,
@@ -99,6 +111,8 @@ class Joystick
     int _joystick_mode;
     int previous_button_pressed_time = 0;
     int previous_joystick_direction_output_time = 0;
+    bool continuous_output = false;
+    joystick_direction previous_joystick_direction = NONE;
 
     Button button;
     void read();
@@ -113,6 +127,7 @@ public:
                                                                              previous_joystick_direction_output_time(0),
                                                                              _button_mode(button_mode),
                                                                              _joystick_mode(joystick_mode),
+                                                                             continuous_output(false),
                                                                              button(Sw){};
 
     joystick_direction update();

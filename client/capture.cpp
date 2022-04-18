@@ -1,6 +1,12 @@
 #include "capture.h"
-
+#include "http_req.h"
 #include <ArduinoJson.h>
+#include "Arduino.h"
+
+char hex(int x)
+{
+    return x >= 10 ? x - 10 + 'a' : x + '0';
+}
 
 int wifi_object_builder(char *object_string, uint32_t os_len, uint8_t channel, int signal_strength, uint8_t *mac_address)
 {
@@ -90,6 +96,6 @@ void catch_request(char *uid, char *RESPONSE)
         offset += sprintf(request + offset, "Content-Type: application/x-www-form-urlencoded\r\n");
         offset += sprintf(request + offset, "Content-Length: %d\r\n\r\n", len);
         offset += sprintf(request + offset, "%s\r\n", request_body);
-        do_http_request("608dev-2.net", request, RESPONSE, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT);
+        do_http_request("608dev-2.net", request, RESPONSE, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
     }
 }

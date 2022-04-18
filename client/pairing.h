@@ -1,12 +1,12 @@
 #ifndef pairing_h
 #define pairing_h
-#include "util.h"
 
+#define HOSTING_TIMEOUT_MS 5000
 bool connect_wifi();
-
+// TODO: work on using double mode for listen and broadcsat
 bool broadcast(char *my_id);
 
 bool listen(char *other_id);
 
-void post_ids(char *my_id, char *other_id)
+void post_ids(char *my_id, char *other_id);
 #endif

@@ -1,12 +1,9 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
-#include <WiFiClientSecure.h>
-#include <WiFiClient.h>
-#include <ArduinoJson.h>
+
 #include "util.h"
 
-WiFiClientSecure client; // global WiFiClient Secure object
-WiFiClient client2;      // global WiFiClient Secure object
+
 
 const char NETWORK[] = "MIT";
 const char PASSWORD[] = "";
