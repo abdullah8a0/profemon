@@ -175,3 +175,43 @@ void post_ids(char *my_id, char *other_id)
     do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
     Serial.println(response); // viewable in Serial Terminal
 }
+
+void sync_ids(char *my_id, char *game_id)
+{
+    char body[100];                // for body
+    sprintf(body, "me=%s", my_id); // generate body, posting to User, 1 step
+    int body_len = strlen(body);   // calculate body length (for header reporting)
+    sprintf(request, "POST http://608dev-2.net/sandbox/sc/team5/sync.py HTTP/1.1\r\n");
+    strcat(request, "Host: 608dev-2.net\r\n");
+    strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
+    sprintf(request + strlen(request), "Content-Length: %d\r\n", body_len); // append string formatted to end of request buffer
+    strcat(request, "\r\n");                                                // new line from header to body
+    strcat(request, body);                                                  // body
+    strcat(request, "\r\n");                                                // new line
+    Serial.println(request);
+    do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+    Serial.println(response); // viewable in Serial Terminal
+    // copy respose to game_id
+    // game id can be arbitrary length
+    for (int i = 0; i < strlen(response); i++)
+    {
+        game_id[i] = response[i];
+    }
+}
+
+void sync_ids(char *my_id, char *other_id)
+{
+    char body[100];                                  // for body
+    sprintf(body, "me=%s&them=%s", my_id, other_id); // generate body, posting to User, 1 step
+    int body_len = strlen(body);                     // calculate body length (for header reporting)
+    sprintf(request, "POST http://608dev-2.net/sandbox/sc/team5/sync.py HTTP/1.1\r\n");
+    strcat(request, "Host: 608dev-2.net\r\n");
+    strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
+    sprintf(request + strlen(request), "Content-Length: %d\r\n", body_len); // append string formatted to end of request buffer
+    strcat(request, "\r\n");                                                // new line from header to body
+    strcat(request, body);                                                  // body
+    strcat(request, "\r\n");                                                // new line
+    Serial.println(request);
+    do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+    Serial.println(response); // viewable in Serial Terminal
+}
