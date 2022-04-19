@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "base64.hpp"
 
+#include "http_req.h"
 #include "util.h"
 
 // #include "Button.h"
