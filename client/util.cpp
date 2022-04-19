@@ -160,11 +160,11 @@ joystick_direction Joystick::update()
     }
     else if (VRx_val < -JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_LEFT;
+        dir = JOYSTICK_RIGHT;
     }
     else if (VRx_val > JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_RIGHT;
+        dir = JOYSTICK_LEFT;
     }
     else if (VRy_val < -JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
