@@ -114,6 +114,10 @@ uint16_t opponent_max_hp;
 uint16_t opponent_hp;
 uint16_t opponent_new_hp;
 char display_text[2][100];
+uint8_t battle_result = 0;
+const uint8_t CONT = 0;
+const uint8_t WIN = 1;
+const uint8_t LOSE = 2;
 
 // ui constants
 const uint8_t xm = 4; // width margin
@@ -403,6 +407,11 @@ void loop() {
               }
 
               if (millis() - timer > 3000) {
+                battle_result = check_battle_end();
+                if (battle_result > 0) {
+                  game_state = GAME_END;
+                  break;
+                }
                 tft.fillRect(0, ym+img_h, w, h-img_h-ym, TFT_BLACK);
                 tft.setCursor(0, ym+img_h+10, 2);
                 tft.println(display_text[1]);
@@ -412,6 +421,10 @@ void loop() {
               }
 
               if (millis() - timer > 6000) {
+                battle_result = check_battle_end();
+                if (battle_result > 0) {
+                  game_state = GAME_END;
+                }
                 battle_state = BATTLE_MOVE;
               }
             break;
@@ -423,7 +436,11 @@ void loop() {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0, 2);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("You won!");
+            if (battle_result == WIN) {
+              tft.println("You won!");
+            } else if (battle_result == LOSE) {
+              tft.println("You lost!");
+            }
             old_game_state = game_state;
 
             // free memory used for battle images
@@ -594,15 +611,24 @@ bool battle_step() {
     return false;
   }
   deserializeJson(doc, img_response);
-  player_hp = doc[0]["player_hp"];
-  opponent_hp = doc[0]["opponent_hp"];
-  player_new_hp = doc[1]["player_hp"];
-  opponent_new_hp = doc[1]["opponent_hp"];
-  strcpy(display_text[0], doc[0]["display_text"]);
-  strcpy(display_text[1], doc[1]["display_text"]);
+  player_hp = doc["move1"]["player_hp"];
+  opponent_hp = doc["move1"]["opponent_hp"];
+  player_new_hp = doc["move2"]["player_hp"];
+  opponent_new_hp = doc["move2"]["opponent_hp"];
+  strcpy(display_text[0], doc["move1"]["display_text"]);
+  strcpy(display_text[1], doc["move2"]["display_text"]);
   return true;
 }
 
+uint8_t check_battle_end() {
+  if (player_hp = 0) {
+    return LOSE;
+  }
+  if (opponent_hp = 0) {
+    return WIN;
+  }
+  return CONT;
+}
 
 void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int ypos) {
 
