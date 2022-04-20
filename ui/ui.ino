@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "base64.hpp"
 
+#include "http_req.h"
 #include "util.h"
 
 // #include "Button.h"
@@ -60,11 +61,16 @@ char request_buffer[100];
 // game related variables
 StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
+uint8_t user = 42;
 uint32_t timer;
+
+// start
+uint8_t next_state = CAPTURE;
+int color1 = TFT_GREEN;
+int color2 = TFT_WHITE;
 
 // selection
 char* img_response;
-char user_name[15];
 char prof_names[10][25];
 uint8_t** prof_images; // dynamically assign memory
 uint16_t prof_images_size[10];
@@ -146,25 +152,38 @@ void loop() {
 //   int b1 = button1.update();
 //   int b2 = button2.update();
   joystick_direction joydir = joystick.update();
-  int joyb = joystick.Sw_val;
+  uint8_t joyb = joystick.Sw_val;
   switch(state) {
     case START:
       if(old_state != state) {
         tft.fillScreen(TFT_BLACK);
-        tft.setCursor(0, 0, 2);
-        tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("Joystick left \nto battle.");
-        tft.println("Joystick right \nto capture.");
         old_state = state;
-        // get username
-        strcpy(user_name, "andi");
       }
-      if (joydir == JOYSTICK_LEFT) {
-        state = GAME;
+
+      tft.setTextColor(color1, TFT_BLACK);
+      tft.drawRoundRect(20, 40, w-20*2, 30, 4, color1);
+      tft.setCursor(35, 48, 2);
+      tft.println("CAPTURE");
+      tft.setTextColor(color2, TFT_BLACK);
+      tft.drawRoundRect(20, 85, w-20*2, 30, 4, color2);
+      tft.setCursor(40, 93, 2);
+      tft.println("BATTLE");
+
+      if (joydir == JOYSTICK_UP) {
+        next_state = CAPTURE;
+        color1 = TFT_GREEN;
+        color2 = TFT_WHITE;
       }
-      else if (joydir == JOYSTICK_RIGHT) {
-        state = CAPTURE;
+      else if (joydir == JOYSTICK_DOWN) {
+        next_state = GAME;
+        color1 = TFT_WHITE;
+        color2 = TFT_GREEN;
       }
+
+      if (joyb == 1) {
+        state = next_state;
+      }
+
     break;
 
     case CAPTURE:
@@ -381,14 +400,14 @@ void loop() {
 void get_profemons() {
   // get length of the response
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s&len=true HTTP/1.1\r\n", user_name);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%d&len=true HTTP/1.1\r\n", user);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
   img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
   // get the images
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%s HTTP/1.1\r\n", user_name);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%d HTTP/1.1\r\n", user);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   deserializeJson(doc, img_response);
@@ -418,7 +437,7 @@ void select_profemon(uint8_t i) {
 
 void send_selection(uint8_t i) {
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%s&game_id=%d&profemon=%s HTTP/1.1\r\n", user_name, game_id, prof_names[i]);
+  sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%d&game_id=%d&profemon=%s HTTP/1.1\r\n", user, game_id, prof_names[i]);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   Serial.println(response);
@@ -428,16 +447,16 @@ void send_selection(uint8_t i) {
 
 bool battle_init() {
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%s&game_id=%d&init=true&len=true HTTP/1.1\r\n", user_name, game_id);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%d&game_id=%d&init=true&len=true HTTP/1.1\r\n", user, game_id);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-  if (strcmp(response, "wait\n") == 0) {
+  if (strstr(response, "wait") != NULL) {
     return false;
   }
   uint16_t IMG_BUFFER_SIZE = atoi(response) + 10;
   img_response = (char*)calloc(IMG_BUFFER_SIZE, sizeof(char));
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%s&game_id=%d&init=true HTTP/1.1\r\n", user_name, game_id);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%d&game_id=%d&init=true HTTP/1.1\r\n", user, game_id);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, img_response, IMG_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   deserializeJson(doc, img_response);
@@ -513,7 +532,7 @@ void display_battle() {
 
 void send_move(uint8_t i) {
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%s&game_id=%d&move=%s HTTP/1.1\r\n", user_name, game_id, player_moves[i]);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%d&game_id=%d&move=%s HTTP/1.1\r\n", user, game_id, player_moves[i]);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   Serial.println(response);
@@ -521,10 +540,11 @@ void send_move(uint8_t i) {
 
 bool battle_step() {
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%s&game_id=%d&init=true&len=true HTTP/1.1\r\n", user_name, game_id);
+  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%d&game_id=%d HTTP/1.1\r\n", user, game_id);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-  if (strcmp(response, "wait\n") == 0) {
+  Serial.println(response);
+  if (strstr(response, "wait") != NULL) {
     return false;
   }
   deserializeJson(doc, img_response);

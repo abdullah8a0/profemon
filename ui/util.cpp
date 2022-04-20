@@ -1,5 +1,9 @@
 #include "util.h"
 
+// const uint16_t RESPONSE_TIMEOUT = 6000;
+// const uint16_t IN_BUFFER_SIZE = 5000;  // size of buffer to hold HTTP request
+// const uint16_t OUT_BUFFER_SIZE = 1000; // size of buffer to hold HTTP response
+// const uint16_t JSON_BODY_SIZE = 3000;
 Button::Button(int p)
 {
     flag = 0;
@@ -145,12 +149,12 @@ joystick_direction Joystick::update()
 {
 
     read();
-    // Serial.print("VRx_val: ");
-    // Serial.print(VRx_val);
-    // Serial.print(" VRy_val: ");
-    // Serial.print(VRy_val);
-    // Serial.print(" Sw_val: ");
-    // Serial.println(Sw_val);
+//    Serial.print("VRx_val: ");
+//    Serial.print(VRx_val);
+//    Serial.print(" VRy_val: ");
+//    Serial.print(VRy_val);
+//    Serial.print(" Sw_val: ");
+//    Serial.println(Sw_val);
 
     joystick_direction dir;
 
@@ -160,19 +164,19 @@ joystick_direction Joystick::update()
     }
     else if (VRx_val < -JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_RIGHT;
+        dir = JOYSTICK_LEFT;
     }
     else if (VRx_val > JOYSTICK_DEADZONE && abs(VRy_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_LEFT;
+        dir = JOYSTICK_RIGHT;
     }
     else if (VRy_val < -JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_DOWN;
+        dir = JOYSTICK_UP;
     }
     else if (VRy_val > JOYSTICK_DEADZONE && abs(VRx_val) < JOYSTICK_DEADZONE)
     {
-        dir = JOYSTICK_UP;
+        dir = JOYSTICK_DOWN;
     }
     else
     {
@@ -181,19 +185,24 @@ joystick_direction Joystick::update()
 
     if (_joystick_mode == 1)
     {
-
-        if (millis() - previous_joystick_direction_output_time < JOYSTICK_UPDATE_DELAY)
-        {
-            return NONE;
-        }
-        else
+        if (previous_joystick_direction != dir)
         {
             previous_joystick_direction_output_time = millis();
+            previous_joystick_direction = dir;
             return dir;
         }
+
+        if (millis() - previous_joystick_direction_output_time >= JOYSTICK_UPDATE_DELAY)
+        {
+            previous_joystick_direction_output_time = millis();
+            previous_joystick_direction = dir;
+            return dir;
+        }
+        return NONE;
     }
     else if (_joystick_mode == 0)
     {
+        previous_joystick_direction = dir;
         return dir;
     }
 }
