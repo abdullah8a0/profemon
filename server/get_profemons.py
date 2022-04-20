@@ -40,7 +40,7 @@ def request_handler(request):
         user = request['values']['user']
         conn = sqlite3.connect(profemon_db)
         c = conn.cursor()
-        uids = c.execute("SELECT cipher FROM catch WHERE user = ?;",(user,)).fetchall()
+        uids = c.execute("SELECT cipher FROM capture WHERE user = ?;",(user,)).fetchall()
         owned_profemons = []
         for uid in uids:
             owned_profemons.append(get_profemon_name_image_trio(uid[0],c))
