@@ -28,12 +28,12 @@ def get_profemon_name_image_trio(uid,c):
     #dir_path = os.path.dirname(os.path.realpath(__file__))
     
     file_name = '{}.jpg'.format(name)
-    file_path = os.path.join(dir_path, file_name)
+    file_path = os.path.join(dir_path,file_name)
     #smallbin = jpg2bin_small(file_path)
     bigbin = jpg2bin(file_path)
     encodedbin = base64.standard_b64encode(bigbin)
     encodedbin = encodedbin.decode('ascii')
-    return {'len': len(bigbin), 'name': name, 'image': encodedbin}
+    return {'len':len(bigbin),'name':name,'image':encodedbin}
 
 def request_handler(request):
     try:

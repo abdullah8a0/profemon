@@ -59,8 +59,8 @@ def request_handler(request):
             erase = request['values']['erase']
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
-            c.execute('''DELETE FROM capture WHERE user = ?;''', (erase,))
-            c.execute('''DELETE FROM capture WHERE cipher = ?;''', (erase,))
+            c.execute('''DELETE FROM catch WHERE user = ?;''', (erase,))
+            c.execute('''DELETE FROM catch WHERE cipher = ?;''', (erase,))
             conn.commit()
             conn.close()
             return "Deleted " + erase
@@ -69,9 +69,9 @@ def request_handler(request):
         try:
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
-            #c.execute('''DELETE FROM capture WHERE profemon_name = 'AndiLiuTheLegendary' OR profemon_name = 'AndiLiu';''')
-            c.execute('''CREATE TABLE IF NOT EXISTS capture (user text, cipher text, lat float, lon float, time timestamp, profemon_name text);''')
-            database = c.execute('''SELECT * FROM capture;''').fetchall()
+            #c.execute('''DELETE FROM catch WHERE profemon_name = 'AndiLiuTheLegendary' OR profemon_name = 'AndiLiu';''')
+            c.execute('''CREATE TABLE IF NOT EXISTS catch (user int, cipher text, lat float, lon float, time timestamp, profemon_name text);''')
+            database = c.execute('''SELECT * FROM catch;''').fetchall()
             conn.commit()
             conn.close()
             return database
@@ -96,13 +96,13 @@ def request_handler(request):
             name = name[0]
         
             #If the profemon does exist in our database, check if it was already caught by the user
-            c.execute('''CREATE TABLE IF NOT EXISTS capture (user text, cipher text, lat float, lon float, time timestamp, profemon_name text);''')
-            past = c.execute('''SELECT * FROM capture WHERE user = ? AND cipher = ?;''',(user, cipher, )).fetchone()
+            c.execute('''CREATE TABLE IF NOT EXISTS catch (user int, cipher text, lat float, lon float, time timestamp, profemon_name text);''')
+            past = c.execute('''SELECT * FROM catch WHERE user = ? AND cipher = ?;''',(user, cipher, )).fetchone()
             if past != None:
                 return "Already caught " + name + " before!"
 
             #If not caught by this user, then insert this into our record
-            c.execute('''INSERT into capture VALUES (?,?,?,?,?,?);''', (user,cipher,lat,lon,datetime.datetime.now(),name))
+            c.execute('''INSERT into catch VALUES (?,?,?,?,?,?);''', (user,cipher,lat,lon,datetime.datetime.now(),name))
             conn.commit() 
             conn.close() 
             return "Successfully captured " + name + "!"

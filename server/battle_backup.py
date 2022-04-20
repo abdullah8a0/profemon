@@ -36,14 +36,8 @@ def get_profemon_image(name, size = 'big'):
     encodedbin = encodedbin.decode('ascii')
     return len(binary), encodedbin
 
-def calculate_move_damage(move,player,opponent):
-    conn2 = sqlite3.connect(profemon_db)
-    c2 = conn2.cursor()
-    stats = c2.execute('''SELECT atk, def, spatk, spdef FROM profemon WHERE name = ?;''', (player,)).fetchone()
-    atk, deff, spatk, spdef = stats[0], stats[1], stats[2], stats[3]
-    stats = c2.execute('''SELECT atk, def, spatk, spdef FROM profemon WHERE name = ?;''', (opponent,)).fetchone()
-    atk2, deff2, spatk2, spdef2 = stats[0], stats[1], stats[2], stats[3]
-    return random.randint(10,80)
+def calculate_move_damage(move):
+    return random.randint(10,40)
 
 
 def request_handler(req):
@@ -63,71 +57,59 @@ def request_handler(req):
 
 
     def battle_res(name1, name2, move1, move2, c, game_id): #Calculate the result of the battle
-        # Here the names should be absolute, meaning that name1 is the profemon used by the first user that entered the room
-        hps = c.execute('''SELECT hp1, hp2 FROM meta WHERE game_id = ?;''', (game_id,)).fetchone()
-        now_hp1, now_hp2 = hps[0], hps[1]
+        data = c.execute('''SELECT user1, user2, name1, name2, hp1, hp2 FROM meta WHERE game_id = ?;''', (game_id,)).fetchone()
+        user1, user2, name1, name2, now_hp1, now_hp2 = data[0], data[1], data[2], data[3], data[4], data[5]
 
         conn2 = sqlite3.connect(profemon_db)
         c2 = conn2.cursor()
         stats = c2.execute('''SELECT move1, move2, move3, move4, hp, atk, def, spatk, spdef, spd FROM profemon WHERE name = ?;''', (name1,)).fetchone()
-        moves, hp = stats[:4], stats[4]
+        move1, move2, move3, move4, hp = stats[0], stats[1], stats[2], stats[3], stats[4]
         atk, deff, spatk, spdef, spd = stats[5], stats[6], stats[7], stats[8], stats[9]
         stats = c2.execute('''SELECT hp, atk, def, spatk, spdef, spd FROM profemon WHERE name = ?;''', (name2,)).fetchone()
         hp2, atk2, deff2, spatk2, spdef2, spd2 = stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]
-        conn2.close()
 
         hp1_1, hp2_1 = now_hp1, now_hp2 # hp1_1, hp2_1 means the respective hp of profemon 1,2 after first_round
-        display_text_1, display_text_2 = "",""
+        display_text_1, displayer_text_2 = "",""
 
         if spd == spd2: # Tie breaker
             spd += random.randint(0,1)
         if spd > spd2: # Profemon one moves first
-            hp2_1 -= calculate_move_damage(move1, name1, name2)
-            display_text_1 = f'{name1} used {move1}'
-            if hp2_1 <= 0:
-                display_text_2 = f'{name2} fainted!'
+            hp2_1 -= calculate_move_damage(move1)
+            display_text_1 = {f'{name1} used {move1}'}
         else: #Profemon two moves first
-            hp1_1 -= calculate_move_damage(move2, name2, name1)
-            display_text_1 = f'{name2} used {move2}'
-            if hp1_1 <= 0:
-                display_text_2 = '{name1} fainted!'
-
+            hp1_1 -= calculate_move_damage(move2)
+            display_text_1 = {f'{name2} used {move2}'}
 
         hp1_2, hp2_2 = hp1_1, hp2_1 # The final hp after both moves
-        
+        if spd <= spd2: # Profemon one moves second
+            hp2_2 -= calculate_move_damage(move1)
+            display_text_2 = {f'{name1} used {move1}'}
+        else: #Profemon two moves second
+            hp1_2 -= calculate_move_damage(move2)
+            display_text_2 = {f'{name2} used {move2}'}
         dic = {"move1":{"player_hp":hp1_1,"opponent_hp":hp2_1,"display_text":display_text_1},
         "move2":{"player_hp":hp1_2,"opponent_hp":hp2_2,"display_text":display_text_2}}
-
-        if hp1_1 <= 0 or hp2_1 <= 0: # If first move kills 
-            return dic
-            
-        if spd <= spd2: # Profemon one moves second
-            hp2_2 -= calculate_move_damage(move1, name1, name2)
-            display_text_2 = f'{name1} used {move1}'
-            if hp2_2 <= 0:
-                display_text_2 += f'\n {name2} fainted!'
-        else: #Profemon two moves second
-            hp1_2 -= calculate_move_damage(move2, name2, name1)
-            display_text_2 = f'{name2} used {move2}'
-            if hp1_2 <= 0:
-                display_text_2 += f'\n {name1} fainted!'
-
-        # Update the new hp
-        c.execute('''UPDATE meta SET hp1 = ?, hp2 = ? WHERE game_id = ?''',(hp1_2,hp2_2,game_id))
-        
-        # Create the dictionary to be converted to json
-        dic["move2"] = {"player_hp":hp1_2,"opponent_hp":hp2_2,"display_text":display_text_2}
         
         return dic
 
 
-    if 'reset' in req['values']:
+    try:
         reset = req['values']['reset']
-        c.execute('''DROP TABLE IF EXISTS meta;''')
-        c.execute('''DROP TABLE IF EXISTS move;''')
-        for json_file in os.listdir(json_path):
-            os.remove(os.path.join(json_path,json_file)) 
+        c.execute('''DROP TABLE meta;''')
+        c.execute('''DROP TABLE battle;''')
+    except:
+        pass
     if req['method'] == 'POST':
+        try:
+            delete = req['values']['delete']
+            game_id = req['values']['game_id']
+            if delete == 'true':
+                c.execute('''DELETE FROM meta WHERE game_id = ?;''', (game_id,))
+                conn.commit()
+                conn.close()
+                return f"Game {game_id} is deleted"
+        except:
+            pass
         try: # Joining the game
             user = req['values']['user']
             user = int(user)
@@ -149,8 +131,7 @@ def request_handler(req):
                 response = "Can't join an ongoing game!"
         #except ValueError or KeyError: #Why the heck is this KeyError not caught
         except Exception as e:
-            pass 
-            
+            pass
         try:
             #The user has passed in a move
             move = req['values']['move']
@@ -161,7 +142,7 @@ def request_handler(req):
             conn2 = sqlite3.connect(profemon_db)
             c2 = conn2.cursor()
             stats = c2.execute('''SELECT move1, move2, move3, move4, hp, atk, def, spatk, spdef, spd FROM profemon WHERE name = ?;''', (name1,)).fetchone()
-            moves, hp = stats[:4], stats[4]
+            move1, move2, move3, move4, hp = stats[0], stats[1], stats[2], stats[3], stats[4]
             atk, deff, spatk, spdef, spd = stats[5], stats[6], stats[7], stats[8], stats[9]
             stats = c2.execute('''SELECT hp, atk, def, spatk, spdef, spd FROM profemon WHERE name = ?;''', (name2,)).fetchone()
             hp2, atk2, deff2, spatk2, spdef2, spd2 = stats[0], stats[1], stats[2], stats[3], stats[4], stats[5]
@@ -169,18 +150,18 @@ def request_handler(req):
 
             # Check if the opponent has posted any move in the MOVE table
             c.execute('''CREATE TABLE IF NOT EXISTS move (game_id int, move1 text, move2 text)''')
-            move1 = c.execute('''SELECT move1 FROM move WHERE game_id = ?;''', (game_id,)).fetchone()
-            move2 = c.execute('''SELECT move2 FROM move WHERE game_id = ?;''', (game_id,)).fetchone()
+            move_1 = c.execute('''SELECT move1 FROM move WHERE game_id = ?;''', (game_id,))
+            move_2 = c.execute('''SELECT move2 FROM move WHERE game_id = ?;''', (game_id,))
 
             if move1 != None or move2 != None: # Then the opponent already passed in a move
                 # We generate the json file
-                if move1[0] == 'n/a':
-                    move1,move2 = move,move2[0]
+                if move1 != None:
+                    move1 = move
                 else:
-                    move2,move1 = move,move1[0]
+                    move2 = move
                 dic = battle_res(name1,name2,move1,move2,c,game_id) if user == user1 else battle_res(name2,name1,move2,move1,c,game_id)
-                json1_path = os.path.join(json_path,f'{game_id}-{user1}-1.json') #user1-centric
-                json2_path = os.path.join(json_path,f'{game_id}-{user2}-2.json') #user2-centric
+                json1_path = os.path.join(json_path,f'{game_id}1.json') #user1-centric
+                json2_path = os.path.join(json_path,f'{game_id}2.json') #user2-centric
                 with open(json1_path, 'w') as outfile:
                     json.dump(dic, outfile)
                 with open(json2_path, 'w') as outfile:
@@ -188,46 +169,26 @@ def request_handler(req):
                     dic['move2']['player_hp'], dic['move2']['opponent_hp'] = dic['move2']['opponent_hp'], dic['move2']['player_hp']
                     json.dump(dic, outfile)
                 response = "Both players moved! Calculating the result..."
-                c.execute('''DELETE FROM move WHERE game_id = ?;''', (game_id,))
-                if dic['move2']['player_hp'] <= 0 or dic['move2']['opponent_hp'] <= 0:
-                    c.execute('''DELETE FROM meta WHERE game_id = ?;''', (game_id,))
             
             else:
-                c.execute('''INSERT INTO move VALUES (?, ?, ?);''', (game_id, 'n/a' if user != user1 else move, 'n/a' if user != user2 else move))
+                c.execute('''INSERT INTO move VALUES (?, ?, ?));''', (game_id, 'n/a' if user != user1 else move, 'n/a' if user != user2 else move))
                 response = "Still waiting for the opponent to move"
 
         except Exception as e:
-            pass
-            #return traceback.format_exc() 
-            
-
-
-
+            return traceback.format_exc() 
     elif req['method'] == 'GET':
-        user = req['values']['user']
-        user = int(user)
-        game_id = req['values']['game_id']
-        if 'init' not in req['values']: #So people are just asking for updates
-            json1_path = os.path.join(json_path,f'{game_id}-{user}-1.json') #user1-centric
-            json2_path = os.path.join(json_path,f'{game_id}-{user}-2.json') #user2-centric
-
-            if os.path.exists(json1_path):
-                with open(json1_path) as json_file:
-                    data = json.load(json_file)
-                    response = str(data)
-                os.remove(json1_path) # burn after read
-            if os.path.exists(json2_path):
-                with open(json2_path) as json_file:
-                    data = json.load(json_file)
-                    response = str(data)
-                os.remove(json2_path)
-
-        else: #So people are asking for the image
-            try:
-                data = c.execute('''SELECT user1, user2, name1, name2, hp1, hp2 FROM meta WHERE game_id = ?;''', (game_id,)).fetchone()
-                user1, user2, name1, name2, now_hp1, now_hp2 = data[0], data[1], data[2], data[3], data[4], data[5]
+#        try:
+#            meta = req['values']['meta']
+#            data = c.execute('''SELECT)
+        try:
+            user = req['values']['user']
+            user = int(user)
+            game_id = req['values']['game_id']
+            data = c.execute('''SELECT user1, user2, name1, name2, hp1, hp2 FROM meta WHERE game_id = ?;''', (game_id,)).fetchone()
+            user1, user2, name1, name2, now_hp1, now_hp2 = data[0], data[1], data[2], data[3], data[4], data[5]
+            if 'init' in req['values']: #So people are asking for the image
                 status = get_game_status(game_id)
-                if user == user2: # Swap
+                if user == user2:
                     user1, user2, name1, name2, now_hp1, now_hp2 = user2, user1, name2, name1, now_hp2, now_hp1
                 if status == 0:
                     response = "Game doesn't exist"
@@ -244,15 +205,31 @@ def request_handler(req):
                     conn2.close()
                     len1, image1 = get_profemon_image(name1,size = 'small')
                     len2, image2 = get_profemon_image(name2,size = 'small')
+                    #move1, move2, move3, move4 = "Astonish", "Confuse", "Double Team", "Hypnosis"
                     dic = {"player":{"len":len1,"image":image1,"moves":[move1,move2,move3,move4],"max_hp":hp}, "opponent":{"len":len2,"image":image2,"max_hp":hp}}
                     json_res = json.dumps(dic)
                     response = str(json_res)
-                    if 'len' in req['values']:
-                        length = req['values']['len'] #So people are asking for the length of the json file 
+                    try:
+                        length = req['values']['len']
                         response = len(response)
-            except Exception as e:
-                return traceback.format_exc() 
+                    except:
+                        pass
+            else: # They are just asking for updates about battle status
+                json1_path = os.path.join(json_path,f'{game_id}1.json') #user1-centric
+                json2_path = os.path.join(json_path,f'{game_id}2.json') #user2-centric
 
+                if user == user1 and os.path.exists(json1_path):
+                    with open(json1_path) as json_file:
+                        data = json.load(json_file)
+                        response = str(data)
+                    os.remove(json1_path)
+                if user == user2 and os.path.exists(json2_path):
+                    with open(json2_path) as json_file:
+                        data = json.load(json_file)
+                        response = str(data)
+                    os.remove(json2_path)
+        except Exception as e:
+            return traceback.format_exc() 
     conn.commit()
     conn.close()
     return response

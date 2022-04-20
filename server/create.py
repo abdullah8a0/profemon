@@ -6,7 +6,7 @@ def request_handler(request):
         try:
             user = request['form']['name']
             cipher = request['form']['cipher']
-            hp, atk, deff, spatk, spdef, spd, move1, move2, move3, move4 = 0,0,0,0,0,0,1,2,3,4
+            hp, atk, deff, spatk, spdef, spd, move1, move2, move3, move4 = 0,0,0,0,0,0,"a move","a move","a move","a move"
             try:
                 hp = request['form']['hp']
                 atk = request['form']['atk']
@@ -26,7 +26,7 @@ def request_handler(request):
             #First check if the scanned professor exists in our database
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS profemon (name text, cipher text, hp int, atk int, def int, spatk int, spdef int, spd int, move1 int, move2 int, move3 int, move4 int);''')
+            c.execute('''CREATE TABLE IF NOT EXISTS profemon (name text, cipher text, hp int, atk int, def int, spatk int, spdef int, spd int, move1 text, move2 text, move3 text, move4 text);''')
             if user == 'delete':
                 c.execute('''DELETE FROM profemon WHERE cipher = (?);''', (cipher,))
             else:
@@ -37,7 +37,7 @@ def request_handler(request):
                 return "Successfully deleted!"
             return "Successfully created!"
         except Exception as e:
-            return e
+            return traceback.print_exc()
     else:
     # GET request with the jpeg argument pased in -> retrieve name and image in jpeg form
     # UNFINISHED
@@ -46,7 +46,7 @@ def request_handler(request):
             cipher = request['values']['cipher']
             conn = sqlite3.connect(profemon_db)
             c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS profemon (name text, cipher text, hp int, atk int, def int, spatk int, spdef int, spd int, move1 int, move2 int, move3 int, move4 int);''')
+            c.execute('''CREATE TABLE IF NOT EXISTS profemon (name text, cipher text, hp int, atk int, def int, spatk int, spdef int, spd int, move1 text, move2 text, move3 text, move4 text);''')
             profemon = c.execute('''SELECT name FROM profemon WHERE cipher = ?;''', (cipher,)).fetchone()
             conn.close()
             return profemon[0]

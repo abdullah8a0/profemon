@@ -1,29 +1,21 @@
 import sqlite3
-import time
+new_game_db = "/var/jail/home/team5/new_game.db"
 
-battle_db = "/var/jail/home/team5/battle.db"
 def request_handler(request):
     if request["method"] == "POST":
-        p = request["form"]["me"]
-        try:
-            int(p)
-        except:
-            return "Error: Invalid input, p1 must be integers"
-        # DB battle.bd TABLE meta, (game_id int, user1 text, name1 text, user2 text, name2 text,hp1 int, hp2 int)
-        # find game_id corresponting to p
-        conn = sqlite3.connect(battle_db)
+        p1 = request["form"]["me"]
+        conn = sqlite3.connect(new_game_db)
         c = conn.cursor()
-        c.execute("SELECT game_id FROM meta WHERE user1=?", (p,))
+        c.execute('''CREATE TABLE IF NOT EXISTS games (game_id text, player1 text, player2 text);''')
+
+        # find the game id corresponding to the player
+
+        c.execute('''SELECT game_id FROM games WHERE player1 = ? OR player2 = ?;''', (p1,p1))
         game_id = c.fetchone()
-        if game_id is None:
-            c.execute("SELECT game_id FROM meta WHERE user2=?", (p,))
-            game_id = c.fetchone()
-        if game_id is None:
-            return "Error: Invalid input, p1 not found"
-        game_id = game_id[0] 
         conn.commit()
         conn.close()
-        return str(game_id)
-
-def generate_ids(p1,p2):
-    return str(p1) + str(p2) + str(int(time.time()))
+        if game_id is None:
+            # return game_id
+            return "You are not in a game"
+        else:
+            return game_id[0]
