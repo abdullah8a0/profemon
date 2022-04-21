@@ -25,8 +25,8 @@ const uint8_t VRx = 5;
 const uint8_t VRy = 6;
 const uint8_t Sw = 12;
 Joystick joystick(VRx, VRy, Sw, 0, 1);
-Button button1(BUTTON1);
-Button button2(BUTTON2);
+// Button button1(BUTTON1);
+// Button button2(BUTTON2);
 
 const uint8_t START = 0;
 const uint8_t CAPTURE = 1;
@@ -51,7 +51,6 @@ uint8_t old_battle_state = BATTLE_UPDATE;
 const uint8_t PAIR_START = 0;
 const uint8_t PAIR_BROADCAST = 1;
 const uint8_t PAIR_LISTEN = 2;
-const uint8_t PAIR_SYNC = 3;
 uint8_t pair_state = PAIR_START;
 
 char network[] = "MIT";
@@ -130,12 +129,12 @@ const uint8_t box_y[] = {h / 2 - yb - 2, h / 2 - yb - 2, h / 2 + 2, h / 2 + 2};
 #define HOSTING_TIMEOUT_MS 5000
 bool connect_wifi()
 {
-  WiFi.begin("MIT Guest", ""); // attempt to connect to wifi
+  WiFi.begin("MIT GUEST", ""); // attempt to connect to wifi
   uint8_t count = 0;           // count used for Wifi check times
   while (WiFi.status() != WL_CONNECTED && count < 12)
   {
     delay(500);
-    Serial.print(".");
+    Serial.print(".|");
     count++;
   }
   delay(2000);
@@ -149,7 +148,7 @@ bool connect_wifi()
   }
   else
   { // if we failed to connect just Try again.
-    // Serial.println("Failed to Connect :/  Going to restart");
+    Serial.println("Failed to Connect :/  Going to restart");
     // Serial.println(WiFi.status());
     return false;
   }
@@ -169,61 +168,33 @@ bool broadcast(char *my_id)
   int start_time = millis();
   while (millis() - start_time < HOSTING_TIMEOUT_MS)
   {
-    //     WiFiClient client = server.available();
-    //     int already_connected = 0;
-    //     if (!already_connected)
-    //     {
-    //         // clear out the input buffer:
-    //         client.flush();
-    //         Serial.println("We have a new client");
-    //         client.println("Hello, client!");
-    //         already_connected = 1;
-    //     }
-    //     char client_id[5];
-    //     for (int i = 0; i < 5; i++) // get 4 char code from client
-    //     {
-    //         if (client.available())
-    //         {
-    //             char c = client.read();
-    //             client_id[i] = c;
-    //             Serial.print(c);
-    //         }
-    //         else
-    //         {
-    //             Serial.println("Client didn't send complete code");
-    //             break;
-    //         }
-    //     }
-
-    //     if (client_id[4] != '\0')
-    //     {
-    //         Serial.println("Client sent incomplete code");
-    //         client.println("Client sent incomplete code");
-    //     }
-    //     else
-    //     {
-    //         Serial.println("Client sent complete code");
-    //         client.println("Client sent complete code");
-    //     }
-
-    //     // paste the code into the other_id
-    //     for (int i = 0; i < 4; i++)
-    //     {
-    //         other_id[i] = client_id[i];
-    //     }
-    //     return true
   }
   free(ssid);
-  if (connect_wifi())
-  {
+  WiFi.disconnect();
+  WiFi.mode(WIFI_STA);
+  return true;
+  // if (connect_wifi())
+  // {
+  //   return true;
+  // }
+  // else
+  // {
+  //   return true;
+  //   return false;
+  // }
+}
 
-    return true;
-  }
-  else
-  {
+// returns a 4 character string of id
+char *make_id(int id)
+{
+  char *id_str = (char *)malloc(sizeof(char) * 5);
 
-    return false;
-  }
+  id_str[0] = (id / 1000) + '0';
+  id_str[1] = ((id % 1000) / 100) + '0';
+  id_str[2] = ((id % 100) / 10) + '0';
+  id_str[3] = (id % 10) + '0';
+  id_str[4] = '\0';
+  return id_str;
 }
 
 bool listen(char *other_id)
@@ -233,7 +204,8 @@ bool listen(char *other_id)
   char wifi_pass[] = "Profemon";
   if (n <= 0)
   {
-    Serial.println("no networks found");
+    Serial.print(n);
+    Serial.println(" networks found");
   }
   else
   {
@@ -265,32 +237,39 @@ void post_ids(char *my_id, char *other_id)
   char body[100];                                  // for body
   sprintf(body, "me=%s&them=%s", my_id, other_id); // generate body, posting to User, 1 step
   int body_len = strlen(body);                     // calculate body length (for header reporting)
-  sprintf(request, "POST http://608dev-2.net/sandbox/sc/team5/temp.py HTTP/1.1\r\n");
-  strcat(request, "Host: 608dev-2.net\r\n");
-  strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
-  sprintf(request + strlen(request), "Content-Length: %d\r\n", body_len); // append string formatted to end of request buffer
-  strcat(request, "\r\n");                                                // new line from header to body
-  strcat(request, body);                                                  // body
-  strcat(request, "\r\n");                                                // new line
-  Serial.println(request);
-  do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+  sprintf(request_buffer, "POST http://608dev-2.net/sandbox/sc/team5/temp.py HTTP/1.1\r\n");
+  strcat(request_buffer, "Host: 608dev-2.net\r\n");
+  strcat(request_buffer, "Content-Type: application/x-www-form-urlencoded\r\n");
+  sprintf(request_buffer + strlen(request_buffer), "Content-Length: %d\r\n", body_len); // append string formatted to end of request_buffer buffer
+  strcat(request_buffer, "\r\n");                                                       // new line from header to body
+  strcat(request_buffer, body);                                                         // body
+  strcat(request_buffer, "\r\n");                                                       // new line
+  Serial.println(request_buffer);
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
   Serial.println(response); // viewable in Serial Terminal
 }
 
-void sync_ids(char *my_id, char *game_id)
+bool sync_ids(char *my_id, char *game_id)
 {
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    if (!connect_wifi())
+    {
+      return false;
+    }
+  }
   char body[100];                // for body
   sprintf(body, "me=%s", my_id); // generate body, posting to User, 1 step
   int body_len = strlen(body);   // calculate body length (for header reporting)
-  sprintf(request, "POST http://608dev-2.net/sandbox/sc/team5/sync.py HTTP/1.1\r\n");
-  strcat(request, "Host: 608dev-2.net\r\n");
-  strcat(request, "Content-Type: application/x-www-form-urlencoded\r\n");
-  sprintf(request + strlen(request), "Content-Length: %d\r\n", body_len); // append string formatted to end of request buffer
-  strcat(request, "\r\n");                                                // new line from header to body
-  strcat(request, body);                                                  // body
-  strcat(request, "\r\n");                                                // new line
-  Serial.println(request);
-  do_http_request("608dev-2.net", request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+  sprintf(request_buffer, "POST http://608dev-2.net/sandbox/sc/team5/sync.py HTTP/1.1\r\n");
+  strcat(request_buffer, "Host: 608dev-2.net\r\n");
+  strcat(request_buffer, "Content-Type: application/x-www-form-urlencoded\r\n");
+  sprintf(request_buffer + strlen(request_buffer), "Content-Length: %d\r\n", body_len); // append string formatted to end of request_buffer buffer
+  strcat(request_buffer, "\r\n");                                                       // new line from header to body
+  strcat(request_buffer, body);                                                         // body
+  strcat(request_buffer, "\r\n");                                                       // new line
+  Serial.println(request_buffer);
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
   Serial.println(response); // viewable in Serial Terminal
   // copy respose to game_id
   // game id can be arbitrary length
@@ -298,6 +277,7 @@ void sync_ids(char *my_id, char *game_id)
   {
     game_id[i] = response[i];
   }
+  return true;
 }
 ///////////////////////////////////////
 ///////////////////////////////////////
@@ -354,11 +334,56 @@ void setup()
   pinMode(Sw, INPUT_PULLUP);
 }
 
+char *myid = make_id(user); // TODO: change this to the actual id @Heidi
+char *other_id = (char *)malloc(sizeof(char) * 5);
+char *temp = (char *)malloc(sizeof(char) * 20);
 void loop()
 {
   //   int b1 = button1.update();
   //   int b2 = button2.update();
+  // print out the pair,game states
+
+  // Serial.printf("pair: %d\n", pair_state);
+  // Serial.printf("game: %d\n", game_state);
+
   joystick_direction joydir = joystick.update();
+  // switch (joydir)
+  // {
+  // case NONE:
+  //   // Serial.println("NONE");
+  //   break;
+  // case JOYSTICK_UP:
+  //   Serial.println("UP");
+  //   Serial.printf("game: %d\n", game_state);
+  //   Serial.printf("pair: %d\n", pair_state);
+  //   Serial.printf("state: %d\n", state);
+  //   break;
+  // case JOYSTICK_DOWN:
+
+  //   Serial.println("DOWN");
+  //   Serial.printf("game: %d\n", game_state);
+  //   Serial.printf("pair: %d\n", pair_state);
+  //   Serial.printf("state: %d\n", state);
+  //   break;
+  // case JOYSTICK_LEFT:
+
+  //   Serial.println("LEFT");
+  //   Serial.printf("game: %d\n", game_state);
+  //   Serial.printf("pair: %d\n", pair_state);
+  //   Serial.printf("state: %d\n", state);
+  //   break;
+  // case JOYSTICK_RIGHT:
+
+  //   Serial.println("RIGHT");
+  //   Serial.printf("game: %d\n", game_state);
+  //   Serial.printf("pair: %d\n", pair_state);
+  //   Serial.printf("state: %d\n", state);
+  //   break;
+
+  // default:
+  //   break;
+  // }
+  // Serial.printf("joy: %d\n", joydir);
   uint8_t joyb = joystick.Sw_val;
   switch (state)
   {
@@ -446,94 +471,92 @@ void loop()
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("Pairing...");
-
-        // do a pairing fsm here
-        char *myid = "1337"; // TODO: change this to the actual id @Heidi
-        char *other_id = (char *)malloc(sizeof(char) * 5);
-        char *thisid = "1337"; // TODO: change this to the actual id @Heidi
-
-        switch (pair_state)
-        {
-        case PAIR_START:
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          tft.println("Go left to listen, right to broadcast.");
-          if (joydir == JOYSTICK_LEFT)
-          {
-            pair_state = PAIR_LISTEN;
-          }
-          else if (joydir == JOYSTICK_RIGHT)
-          {
-            pair_state = PAIR_BROADCAST;
-          }
-          break;
-        case PAIR_BROADCAST:
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          tft.println("Broadcasting...");
-          // do broadcast here
-          if (broadcast(myid))
-          {
-            pair_state = PAIR_SYNC;
-          }
-          else
-          {
-            pair_state = PAIR_START;
-            tft.fillScreen(TFT_BLACK);
-            tft.setCursor(0, 0, 2);
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Broadcast failed. Try again.");
-          }
-          break;
-        case PAIR_LISTEN:
-
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          tft.println("Listening...");
-          // do listen here
-          if (listen(other_id))
-          {
-            pair_state = PAIR_SYNC;
-            post_ids(thisid, other_id);
-            free(other_id);
-          }
-          else
-          {
-            pair_state = PAIR_START;
-            tft.fillScreen(TFT_BLACK);
-            tft.setCursor(0, 0, 2);
-            tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Listening failed. Try again.");
-          }
-          break;
-        case PAIR_SYNC:
-
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          tft.println("Syncing...");
-          // do sync here
-          sync_ids(myid, other_id);
-
-          pair_state = PAIR_START;
-          game_state = GAME_SELECT;
-
-          break;
-
-        default:
-          break;
-        }
-
+        tft.println("Go left to listen, right to broadcast.");
         old_game_state = game_state;
       }
       // if (joyb == 1)
       // {
       //   game_state = GAME_SELECT;
       // }
+      // do a pairing fsm here
+
+      switch (pair_state)
+      {
+      case PAIR_START:
+
+        if (joydir == JOYSTICK_LEFT)
+        {
+          pair_state = PAIR_LISTEN;
+        }
+        else if (joydir == JOYSTICK_RIGHT)
+        {
+          pair_state = PAIR_BROADCAST;
+        }
+        else
+        {
+          // Serial.println("PAIR_START");
+        }
+        break;
+      case PAIR_BROADCAST:
+        tft.fillScreen(TFT_BLACK);
+        tft.setCursor(0, 0, 2);
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.println("Broadcasting...");
+        // do broadcast here
+        if (broadcast(myid))
+        {
+          Serial.println("Broadcast Successful");
+          if (!sync_ids(myid, temp))
+          {
+            Serial.println("Sync Failed");
+                    }
+          else
+          {
+            game_id = atoi(temp);
+            Serial.println(game_id);
+            pair_state = PAIR_START;
+            game_state = GAME_SELECT;
+          }
+        }
+        else
+        {
+          pair_state = PAIR_START;
+          tft.fillScreen(TFT_BLACK);
+          tft.setCursor(0, 0, 2);
+          tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          tft.println("Broadcast failed. Try again.");
+        }
+        break;
+      case PAIR_LISTEN:
+
+        tft.fillScreen(TFT_BLACK);
+        tft.setCursor(0, 0, 2);
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.println("Listening...");
+        // do listen here
+        if (listen(other_id))
+        {
+          post_ids(myid, other_id);
+          sync_ids(myid, temp);
+          game_id = atoi(temp);
+          Serial.println(game_id);
+          pair_state = PAIR_START;
+          game_state = GAME_SELECT;
+        }
+        else
+        {
+          pair_state = PAIR_START;
+          tft.fillScreen(TFT_BLACK);
+          tft.setCursor(0, 0, 2);
+          tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          tft.println("Listening failed. Try again.");
+        }
+        break;
+
+      default:
+        break;
+      }
+
       break;
 
     case GAME_SELECT:
