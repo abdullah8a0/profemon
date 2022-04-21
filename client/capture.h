@@ -10,7 +10,8 @@ const char API_KEY[] = "AIzaSyAQ9SzqkHhV-Gjv-71LohsypXUH447GWX8"; // don't chang
 const int MAX_APS = 15;
 
 char hex(int x);
+char HEXX(int x);
 
-void catch_request(char *uid, char *RESPONSE);
+void catch_request(char *uid, char *RESPONSE, double *lat, double *lng);
 
 #endif

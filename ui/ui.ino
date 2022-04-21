@@ -8,25 +8,29 @@
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include "base64.hpp"
+#include <MFRC522.h>
 
 #include "http_req.h"
 #include "util.h"
 // #include "pairing.h"
 
-// #include "Button.h"
-
+// tft
 TFT_eSPI tft = TFT_eSPI();
 const uint8_t SCREEN_HEIGHT = 160;
 const uint8_t SCREEN_WIDTH = 128;
 const uint8_t BUTTON1 = 45;
 const uint8_t BUTTON2 = 39;
-
+// joystick
 const uint8_t VRx = 5;
 const uint8_t VRy = 6;
 const uint8_t Sw = 12;
 Joystick joystick(VRx, VRy, Sw, 0, 1);
-// Button button1(BUTTON1);
-// Button button2(BUTTON2);
+Button button1(BUTTON1);
+Button button2(BUTTON2);
+// rfid reader
+#define SS_PIN 3
+#define RST_PIN 4
+MFRC522 rfid(SS_PIN, RST_PIN);
 
 const uint8_t START = 0;
 const uint8_t CAPTURE = 1;
@@ -57,21 +61,38 @@ char network[] = "MIT";
 char password[] = "";
 
 // Some constants and some resources:
-const int RESPONSE_TIMEOUT = 6000;    // ms to wait for response from host
-const uint16_t OUT_BUFFER_SIZE = 200; // size of buffer to hold HTTP response
-char response[OUT_BUFFER_SIZE];       // char array buffer to hold HTTP request
+const int RESPONSE_TIMEOUT = 6000;     // ms to wait for response from host
+const uint16_t OUT_BUFFER_SIZE = 5000; // size of buffer to hold HTTP response
+char response[OUT_BUFFER_SIZE];        // char array buffer to hold HTTP request
 char request_buffer[100];
+const uint16_t IN_BUFFER_SIZE = 5000;
+const uint16_t JSON_BODY_SIZE = 5000;
+char request[IN_BUFFER_SIZE];
+char request_body[JSON_BODY_SIZE];
+char response_body[OUT_BUFFER_SIZE];
+char json_body[JSON_BODY_SIZE];
 
 // game related variables
 StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
 uint8_t user = 42;
-uint32_t timer;
+uint32_t timer = millis();
+uint32_t capture_timer = millis();
 
 // start
 uint8_t next_state = CAPTURE;
 int color1 = TFT_GREEN;
 int color2 = TFT_WHITE;
+
+// capture
+char c[1234];
+int siz = 0;
+double lat;
+double lng;
+const char PREFIX[] = "{\"wifiAccessPoints\": [";                 // beginning of json body
+const char SUFFIX[] = "]}";                                       // suffix to POST request
+const char API_KEY[] = "AIzaSyAQ9SzqkHhV-Gjv-71LohsypXUH447GWX8"; // don't change this and don't share this
+const int MAX_APS = 10;
 
 // selection
 char *img_response;
@@ -96,6 +117,10 @@ uint16_t opponent_max_hp;
 uint16_t opponent_hp;
 uint16_t opponent_new_hp;
 char display_text[2][100];
+uint8_t battle_result = 0;
+const uint8_t CONT = 0;
+const uint8_t WIN = 1;
+const uint8_t LOSE = 2;
 
 // ui constants
 const uint8_t xm = 4; // width margin
@@ -290,9 +315,24 @@ bool sync_ids(char *my_id, char *game_id)
 ///////////////////////////////////////
 ///////////////////////////////////////
 
+// void setup() merge conflict
+// {
+//   Serial.begin(115200);          // for debugging if needed.
+//   WiFi.begin(network, password); // attempt to connect to wifi
+//   uint8_t count = 0;             // count used for Wifi check times
+// const uint8_t xo = 4;                                       // text offset x
+// const uint8_t yo = 8;                                       // text offset y
+// const uint8_t xb = 58;                                      // move box width
+// const uint8_t yb = 30;                                      // move box height
+// const uint8_t box_x[] = {xm, w - xm - xb, xm, w - xm - xb}; // move boxes
+// const uint8_t box_y[] = {h / 2 - yb - 2, h / 2 - yb - 2, h / 2 + 2, h / 2 + 2};
+
 void setup()
 {
-  Serial.begin(115200);          // for debugging if needed.
+  Serial.begin(115200); // for debugging if needed.
+  SPI.begin();          // init SPI bus
+  rfid.PCD_Init();      // init MFRC522
+
   WiFi.begin(network, password); // attempt to connect to wifi
   uint8_t count = 0;             // count used for Wifi check times
   Serial.print("Attempting to connect to ");
@@ -318,7 +358,7 @@ void setup()
     Serial.println(WiFi.status());
     ESP.restart(); // restart the ESP (proper way)
   }
-  Serial.begin(115200);
+
   tft.begin();
   tft.setRotation(2);
   tft.setTextSize(1);
@@ -459,6 +499,33 @@ void loop()
         tft.println("Press Button 1 to start pairing with an opponent.");
         old_game_state = game_state;
       }
+
+      if (rfid.PICC_IsNewCardPresent())
+      { // new tag is available
+        if (rfid.PICC_ReadCardSerial())
+        { // NUID has been readed
+          // print UID in Serial Monitor in the hex format
+          Serial.print("UID:");
+          siz = 0;
+          for (int i = 0; i < rfid.uid.size; i++)
+          {
+            c[siz++] = HEXX(rfid.uid.uidByte[i] >> 4);
+            c[siz++] = HEXX(rfid.uid.uidByte[i] & 15);
+            c[siz++] = ' ';
+          }
+          c[siz - 1] = '\0';
+          Serial.println(c);
+          rfid.PICC_HaltA();      // halt PICC
+          rfid.PCD_StopCrypto1(); // stop encryption on PCD
+          catch_request(c, response_body);
+          tft.fillScreen(TFT_BLACK);
+          tft.setCursor(0, 0, 2);
+          tft.println(response_body);
+          tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
+          tft.println("Press to return.");
+        }
+      }
+
       if (joyb == 1)
       {
         game_state = GAME_PAIR;
@@ -509,7 +576,7 @@ void loop()
           if (!sync_ids(myid, temp))
           {
             Serial.println("Sync Failed");
-                    }
+          }
           else
           {
             game_id = atoi(temp);
@@ -688,39 +755,126 @@ void loop()
           {
             battle_state = BATTLE_UPDATE;
           }
-          else
+
+          switch (battle_state)
           {
-            battle_state = BATTLE_WAIT;
-            timer = millis();
+          case BATTLE_MOVE:
+            if (old_battle_state != battle_state)
+            {
+              tft.fillRect(0, ym + img_h, w, h - 2 * (img_h + ym), TFT_BLACK);
+              select_move(curr_move);
+              old_battle_state = battle_state;
+            }
+            if (joydir == JOYSTICK_RIGHT)
+            {
+              curr_move = (curr_move + 1) % 4;
+              select_move(curr_move);
+            }
+            else if (joydir == JOYSTICK_LEFT)
+            {
+              curr_move = (curr_move - 1 + 4) % 4;
+              select_move(curr_move);
+            }
+            else if (joyb == 1)
+            {
+              send_move(curr_move);
+              if (battle_step())
+              {
+                battle_state = BATTLE_UPDATE;
+              }
+              else
+              {
+                battle_state = BATTLE_WAIT;
+              }
+            }
+            break;
+
+          case BATTLE_WAIT:
+            if (old_battle_state != battle_state)
+            {
+              timer = millis();
+              old_battle_state = battle_state;
+            }
+            if (millis() - timer > 2000)
+            {
+              if (battle_step())
+              {
+                battle_state = BATTLE_UPDATE;
+              }
+              else
+              {
+                battle_state = BATTLE_WAIT;
+                timer = millis();
+              }
+            }
+            break;
+
+          case BATTLE_UPDATE:
+            if (old_battle_state != battle_state)
+            {
+              tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+              tft.setCursor(0, ym + img_h + 10, 2);
+              tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              tft.println(display_text[0]);
+              old_battle_state = battle_state;
+              display_hp();
+              timer = millis();
+            }
+
+            if (millis() - timer > 3000)
+            {
+              battle_result = check_battle_end();
+              if (battle_result > 0)
+              {
+                game_state = GAME_END;
+                break;
+              }
+              tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+              tft.setCursor(0, ym + img_h + 10, 2);
+              tft.println(display_text[1]);
+              player_hp = player_new_hp;
+              opponent_hp = opponent_new_hp;
+              display_hp();
+            }
+
+            if (millis() - timer > 6000)
+            {
+              battle_result = check_battle_end();
+              if (battle_result > 0)
+              {
+                game_state = GAME_END;
+              }
+              battle_state = BATTLE_MOVE;
+            }
+            break;
           }
         }
         break;
 
-      case BATTLE_UPDATE:
-        if (old_battle_state != battle_state)
+      case GAME_END:
+        if (old_game_state != game_state)
         {
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
-          tft.setCursor(0, ym + img_h + 10, 2);
-          tft.setTextColor(TFT_WHITE, TFT_BLACK);
-          tft.println(display_text[0]);
-          old_battle_state = battle_state;
-          display_hp();
-          timer = millis();
+          tft.fillScreen(TFT_BLACK);
+          tft.setCursor(0, 0, 2);
+          tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          if (battle_result == WIN)
+          {
+            tft.println("You won!");
+          }
+          else if (battle_result == LOSE)
+          {
+            tft.println("You lost!");
+          }
+          old_game_state = game_state;
+
+          // free memory used for battle images
+          free(player_image);
+          free(opponent_image);
         }
 
-        if (millis() - timer > 3000)
+        if (joyb == 1)
         {
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
-          tft.setCursor(0, ym + img_h + 10, 2);
-          tft.println(display_text[1]);
-          player_hp = player_new_hp;
-          opponent_hp = opponent_new_hp;
-          display_hp();
-        }
-
-        if (millis() - timer > 6000)
-        {
-          battle_state = BATTLE_MOVE;
+          state = START;
         }
         break;
       }
@@ -903,7 +1057,7 @@ void display_battle()
 void send_move(uint8_t i)
 {
   memset(request_buffer, 0, sizeof(request_buffer));
-  sprintf(request_buffer, "GET /sandbox/sc/team5/battle.py?user=%d&game_id=%d&move=%s HTTP/1.1\r\n", user, game_id, player_moves[i]);
+  sprintf(request_buffer, "POST /sandbox/sc/team5/battle.py?user=%d&game_id=%d&move=%s HTTP/1.1\r\n", user, game_id, player_moves[i]);
   strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
   do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
   Serial.println(response);
@@ -921,13 +1075,26 @@ bool battle_step()
     return false;
   }
   deserializeJson(doc, img_response);
-  player_hp = doc[0]["player_hp"];
-  opponent_hp = doc[0]["opponent_hp"];
-  player_new_hp = doc[1]["player_hp"];
-  opponent_new_hp = doc[1]["opponent_hp"];
-  strcpy(display_text[0], doc[0]["display_text"]);
-  strcpy(display_text[1], doc[1]["display_text"]);
+  player_hp = doc["move1"]["player_hp"];
+  opponent_hp = doc["move1"]["opponent_hp"];
+  player_new_hp = doc["move2"]["player_hp"];
+  opponent_new_hp = doc["move2"]["opponent_hp"];
+  strcpy(display_text[0], doc["move1"]["display_text"]);
+  strcpy(display_text[1], doc["move2"]["display_text"]);
   return true;
+}
+
+uint8_t check_battle_end()
+{
+  if (player_hp = 0)
+  {
+    return LOSE;
+  }
+  if (opponent_hp = 0)
+  {
+    return WIN;
+  }
+  return CONT;
 }
 
 void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int ypos)
@@ -939,4 +1106,91 @@ void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int
   JpegDec.decodeArray(arrayname, array_size);
   jpegInfo();
   renderJPEG(x, y, &tft);
+}
+
+char hex(int x)
+}
+
+char HEXX(int x)
+{
+  return x >= 10 ? x - 10 + 'A' : x + '0';
+}
+
+int wifi_object_builder(char *object_string, uint32_t os_len, uint8_t channel, int signal_strength, uint8_t *mac_address)
+{
+  int offset = 0;
+  offset += sprintf(object_string + offset, "{\"macAddress\": \"");
+  for (int i = 0; i < 6; i++)
+  {
+    int x = mac_address[i] >> 4;
+    int y = mac_address[i] & 15;
+    offset += sprintf(object_string + offset, "%c%c", hex(x), hex(y));
+    if (i < 5)
+      offset += sprintf(object_string + offset, ":");
+  }
+  offset += sprintf(object_string + offset, "\",\"signalStrength\": %d,\"age\": 0,\"channel\": %d}", signal_strength, channel);
+  if (offset > os_len)
+  {
+    object_string[0] = '\0';
+    return 0;
+  }
+  return offset;
+}
+
+char *SERVER = "googleapis.com"; // Server URL
+
+void catch_request(char *uid, char *RESPONSE)
+{
+  memset(json_body, 0, sizeof json_body);
+  int offset = sprintf(json_body, "%s", PREFIX);
+  int n = WiFi.scanNetworks();
+  if (n == 0)
+  {
+    Serial.println("no networks found");
+    return;
+  }
+  else
+  {
+    int max_aps = max(min(MAX_APS, n), 1);
+    for (int i = 0; i < max_aps; ++i)
+    {                                                                                                                           // for each valid access point
+      uint8_t *mac = WiFi.BSSID(i);                                                                                             // get the MAC Address
+      offset += wifi_object_builder(json_body + offset, JSON_BODY_SIZE - offset, WiFi.channel(i), WiFi.RSSI(i), WiFi.BSSID(i)); // generate the query
+      if (i != max_aps - 1)
+      {
+        offset += sprintf(json_body + offset, ","); // add comma between entries except trailing.
+      }
+    }
+    sprintf(json_body + offset, "%s", SUFFIX);
+    int len = strlen(json_body);
+    // Make a HTTP request:
+    request[0] = '\0'; // set 0th byte to null
+    offset = 0;        // reset offset variable for sprintf-ing
+    offset += sprintf(request + offset, "POST https://www.googleapis.com/geolocation/v1/geolocate?key=%s  HTTP/1.1\r\n", API_KEY);
+    offset += sprintf(request + offset, "Host: googleapis.com\r\n");
+    offset += sprintf(request + offset, "Content-Type: application/json\r\n");
+    offset += sprintf(request + offset, "cache-control: no-cache\r\n");
+    offset += sprintf(request + offset, "Content-Length: %d\r\n\r\n", len);
+    offset += sprintf(request + offset, "%s\r\n", json_body);
+    do_https_request(SERVER, request, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+    StaticJsonDocument<500> doc;
+    char *start = strchr(response, '{');
+    char *end = strrchr(response, '}');
+    response[*end + 1] = '\0';
+    deserializeJson(doc, start);
+    Serial.println("deserializeJson");
+    lat = doc["location"]["lat"];
+    lng = doc["location"]["lng"];
+  }
+
+  sprintf(request_body, "user=%d&lat=%lf&lon=%lf&cipher=%s", user, lat, lng, uid);
+  int len = strlen(request_body);
+  request[0] = '\0'; // set 0th byte to null
+  offset = 0;        // reset offset variable for sprintf-ing
+  offset += sprintf(request + offset, "POST /sandbox/sc/team5/catch.py HTTP/1.1\r\n");
+  offset += sprintf(request + offset, "Host: 608dev-2.net\r\n");
+  offset += sprintf(request + offset, "Content-Type: application/x-www-form-urlencoded\r\n");
+  offset += sprintf(request + offset, "Content-Length: %d\r\n\r\n", len);
+  offset += sprintf(request + offset, "%s\r\n", request_body);
+  do_http_request("608dev-2.net", request, RESPONSE, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
 }
