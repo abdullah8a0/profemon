@@ -588,60 +588,30 @@ void loop()
         }
         break;
       }
-    }
-    break;
+      break;
 
-  case GAME_END:
-    if (old_game_state != game_state)
-    {
-      tft.fillScreen(TFT_BLACK);
-      tft.setCursor(0, 0, 2);
-      tft.setTextColor(TFT_GREEN, TFT_BLACK);
-      if (battle_result == WIN)
+    case GAME_END:
+      if (old_game_state != game_state)
       {
+        tft.fillScreen(TFT_BLACK);
+        tft.setCursor(0, 0, 2);
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
         tft.println("You won!");
+        old_game_state = game_state;
+
+        // free memory used for battle images
+        free(player_image);
+        free(opponent_image);
       }
-      else if (battle_result == LOSE)
+
+      if (joyb == 1)
       {
-        tft.println("You lost!");
+        state = START;
       }
-      old_game_state = game_state;
-
-      // free memory used for battle images
-      free(player_image);
-      free(opponent_image);
-    }
-
-    if (joyb == 1)
-    {
-      state = START;
+      break;
     }
     break;
   }
-  break;
-
-case GAME_END:
-  if (old_game_state != game_state)
-  {
-    tft.fillScreen(TFT_BLACK);
-    tft.setCursor(0, 0, 2);
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.println("You won!");
-    old_game_state = game_state;
-
-    // free memory used for battle images
-    free(player_image);
-    free(opponent_image);
-  }
-
-  if (joyb == 1)
-  {
-    state = START;
-  }
-  break;
-}
-break;
-}
 }
 
 // void debug() {
