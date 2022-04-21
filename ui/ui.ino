@@ -74,7 +74,7 @@ char json_body[JSON_BODY_SIZE];
 // game related variables
 StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
-uint8_t user = 40;
+uint8_t user = 42;
 uint32_t timer = millis();
 uint32_t capture_timer = millis();
 
@@ -128,7 +128,7 @@ const uint8_t ym = 4; // height margin
 const uint8_t w = tft.width();
 const uint8_t h = tft.height();
 const uint8_t img_w = 32;
-const uint8_t img_h = 40;
+const uint8_t img_h = 42;
 const uint8_t bar_len = w - 2 * xm - img_w;
 const uint8_t bar_h = 8;
 const uint8_t xo = 4;                                       // text offset x
@@ -544,7 +544,7 @@ void loop()
       case BATTLE_UPDATE:
         if (old_battle_state != battle_state)
         {
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.fillRect(0, ym + img_h, w, h - (img_h + ym) * 2, TFT_BLACK);
           tft.setCursor(0, ym + img_h + 10, 2);
           tft.setTextColor(TFT_WHITE, TFT_BLACK);
           tft.println(display_text[0]);
@@ -556,7 +556,7 @@ void loop()
         if (millis() - timer > 3000 && displayed_second_move == false)
         {
           displayed_second_move = true;
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.fillRect(0, ym + img_h, w, h - (img_h + ym) * 2, TFT_BLACK);
           tft.setCursor(0, ym + img_h + 10, 2);
           tft.println(display_text[1]);
           if (player_hp == 0)
