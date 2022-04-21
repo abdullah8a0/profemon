@@ -1108,7 +1108,11 @@ void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int
   renderJPEG(x, y, &tft);
 }
 
+///////// CAPTURE //////////
+
 char hex(int x)
+{
+  return x >= 10 ? x - 10 + 'a' : x + '0';
 }
 
 char HEXX(int x)
