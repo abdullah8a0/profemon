@@ -3,6 +3,7 @@
 ## Everyone
 ### Show an integrated product in a video which can capture profemons and step through a game.
 !(Week 2 Everyone)[]
+
 ## Abdullah & Andi & Ivy
   ### Use the dual AP/Station mode in the ESP32 to speed up the handshake by concurrency, integrate with serverside code
   * The handshake and pairing process is entirely finished on the client along with the server side code to support this. We spent a lot of time integrating this with the UI and server code. The game ID is generated using the UNIX and user IDs.
