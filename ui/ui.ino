@@ -74,7 +74,7 @@ char json_body[JSON_BODY_SIZE];
 // game related variables
 StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
-uint8_t user = 42;
+uint8_t user = 40;
 uint32_t timer = millis();
 uint32_t capture_timer = millis();
 
@@ -117,6 +117,7 @@ uint16_t opponent_hp;
 uint16_t opponent_new_hp;
 char display_text[2][100];
 uint8_t battle_result = 0;
+bool displayed_second_move = false;
 const uint8_t CONT = 0;
 const uint8_t WIN = 1;
 const uint8_t LOSE = 2;
@@ -191,53 +192,11 @@ void setup()
 char *myid = make_id(user); // TODO: change this to the actual id @Heidi
 char *other_id = (char *)malloc(sizeof(char) * 5);
 char *temp = (char *)malloc(sizeof(char) * 20);
+
 void loop()
 {
-  //   int b1 = button1.update();
-  //   int b2 = button2.update();
-  // print out the pair,game states
-
-  // Serial.printf("pair: %d\n", pair_state);
-  // Serial.printf("game: %d\n", game_state);
-
+  Serial.printf("battle state: %d\n", battle_state);
   joystick_direction joydir = joystick.update();
-  // switch (joydir)
-  // {
-  // case NONE:
-  //   // Serial.println("NONE");
-  //   break;
-  // case JOYSTICK_UP:
-  //   Serial.println("UP");
-  //   Serial.printf("game: %d\n", game_state);
-  //   Serial.printf("pair: %d\n", pair_state);
-  //   Serial.printf("state: %d\n", state);
-  //   break;
-  // case JOYSTICK_DOWN:
-
-  //   Serial.println("DOWN");
-  //   Serial.printf("game: %d\n", game_state);
-  //   Serial.printf("pair: %d\n", pair_state);
-  //   Serial.printf("state: %d\n", state);
-  //   break;
-  // case JOYSTICK_LEFT:
-
-  //   Serial.println("LEFT");
-  //   Serial.printf("game: %d\n", game_state);
-  //   Serial.printf("pair: %d\n", pair_state);
-  //   Serial.printf("state: %d\n", state);
-  //   break;
-  // case JOYSTICK_RIGHT:
-
-  //   Serial.println("RIGHT");
-  //   Serial.printf("game: %d\n", game_state);
-  //   Serial.printf("pair: %d\n", pair_state);
-  //   Serial.printf("state: %d\n", state);
-  //   break;
-
-  // default:
-  //   break;
-  // }
-  // Serial.printf("joy: %d\n", joydir);
   uint8_t joyb = joystick.Sw_val;
   switch (state)
   {
@@ -335,7 +294,7 @@ void loop()
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("Press Button 1 to start pairing with an opponent.");
+        tft.println("Press to start pairing with an opponent.");
         old_game_state = game_state;
       }
 
@@ -363,6 +322,8 @@ void loop()
       switch (pair_state)
       {
       case PAIR_START:
+        game_state = GAME_SELECT;
+        game_id = 20;
 
         if (joydir == JOYSTICK_LEFT)
         {
@@ -527,7 +488,6 @@ void loop()
         display_battle();
         battle_state = BATTLE_MOVE;
       }
-
       switch (battle_state)
       {
       case BATTLE_MOVE:
@@ -573,126 +533,58 @@ void loop()
           {
             battle_state = BATTLE_UPDATE;
           }
-
-          switch (battle_state)
+          else
           {
-          case BATTLE_MOVE:
-            if (old_battle_state != battle_state)
-            {
-              tft.fillRect(0, ym + img_h, w, h - 2 * (img_h + ym), TFT_BLACK);
-              select_move(curr_move);
-              old_battle_state = battle_state;
-            }
-            if (joydir == JOYSTICK_RIGHT)
-            {
-              curr_move = (curr_move + 1) % 4;
-              select_move(curr_move);
-            }
-            else if (joydir == JOYSTICK_LEFT)
-            {
-              curr_move = (curr_move - 1 + 4) % 4;
-              select_move(curr_move);
-            }
-            else if (joyb == 1)
-            {
-              send_move(curr_move);
-              if (battle_step())
-              {
-                battle_state = BATTLE_UPDATE;
-              }
-              else
-              {
-                battle_state = BATTLE_WAIT;
-              }
-            }
-            break;
-
-          case BATTLE_WAIT:
-            if (old_battle_state != battle_state)
-            {
-              timer = millis();
-              old_battle_state = battle_state;
-            }
-            if (millis() - timer > 2000)
-            {
-              if (battle_step())
-              {
-                battle_state = BATTLE_UPDATE;
-              }
-              else
-              {
-                battle_state = BATTLE_WAIT;
-                timer = millis();
-              }
-            }
-            break;
-
-          case BATTLE_UPDATE:
-            if (old_battle_state != battle_state)
-            {
-              tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
-              tft.setCursor(0, ym + img_h + 10, 2);
-              tft.setTextColor(TFT_WHITE, TFT_BLACK);
-              tft.println(display_text[0]);
-              old_battle_state = battle_state;
-              display_hp();
-              timer = millis();
-            }
-
-            if (millis() - timer > 3000)
-            {
-              battle_result = check_battle_end();
-              if (battle_result > 0)
-              {
-                game_state = GAME_END;
-                break;
-              }
-              tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
-              tft.setCursor(0, ym + img_h + 10, 2);
-              tft.println(display_text[1]);
-              player_hp = player_new_hp;
-              opponent_hp = opponent_new_hp;
-              display_hp();
-            }
-
-            if (millis() - timer > 6000)
-            {
-              battle_result = check_battle_end();
-              if (battle_result > 0)
-              {
-                game_state = GAME_END;
-              }
-              battle_state = BATTLE_MOVE;
-            }
-            break;
+            battle_state = BATTLE_WAIT;
+            timer = millis();
           }
         }
         break;
 
-      case GAME_END:
-        if (old_game_state != game_state)
+      case BATTLE_UPDATE:
+        if (old_battle_state != battle_state)
         {
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          if (battle_result == WIN)
-          {
-            tft.println("You won!");
-          }
-          else if (battle_result == LOSE)
-          {
-            tft.println("You lost!");
-          }
-          old_game_state = game_state;
-
-          // free memory used for battle images
-          free(player_image);
-          free(opponent_image);
+          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.setCursor(0, ym + img_h + 10, 2);
+          tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          tft.println(display_text[0]);
+          old_battle_state = battle_state;
+          display_hp();
+          displayed_second_move = false;
         }
 
-        if (joyb == 1)
+        if (millis() - timer > 3000 && displayed_second_move == false)
         {
-          state = START;
+          displayed_second_move = true;
+          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.setCursor(0, ym + img_h + 10, 2);
+          tft.println(display_text[1]);
+          if (player_hp == 0)
+            battle_result = LOSE;
+          else if (opponent_hp == 0)
+            battle_result = WIN;
+          if (battle_result == CONT)
+          {
+            player_hp = player_new_hp;
+            opponent_hp = opponent_new_hp;
+            display_hp();
+          }
+        }
+        Serial.printf("time: %d\n", millis() - timer);
+        if (millis() - timer > 6000)
+        {
+          if (battle_result != CONT)
+          {
+            game_state = GAME_END;
+          }
+          else
+          {
+            if (player_hp == 0)
+              battle_result = LOSE;
+            else if (opponent_hp == 0)
+              battle_result = WIN;
+          }
+          battle_state = BATTLE_MOVE;
         }
         break;
       }
@@ -721,6 +613,46 @@ void loop()
     break;
   }
 }
+
+// void debug() {
+//   switch (joydir)
+//   {
+//   case NONE:
+//     // Serial.println("NONE");
+//     break;
+//   case JOYSTICK_UP:
+//     Serial.println("UP");
+//     Serial.printf("game: %d\n", game_state);
+//     Serial.printf("pair: %d\n", pair_state);
+//     Serial.printf("state: %d\n", state);
+//     break;
+//   case JOYSTICK_DOWN:
+//
+//     Serial.println("DOWN");
+//     Serial.printf("game: %d\n", game_state);
+//     Serial.printf("pair: %d\n", pair_state);
+//     Serial.printf("state: %d\n", state);
+//     break;
+//   case JOYSTICK_LEFT:
+//
+//     Serial.println("LEFT");
+//     Serial.printf("game: %d\n", game_state);
+//     Serial.printf("pair: %d\n", pair_state);
+//     Serial.printf("state: %d\n", state);
+//     break;
+//   case JOYSTICK_RIGHT:
+//
+//     Serial.println("RIGHT");
+//     Serial.printf("game: %d\n", game_state);
+//     Serial.printf("pair: %d\n", pair_state);
+//     Serial.printf("state: %d\n", state);
+//     break;
+//
+//   default:
+//     break;
+//   }
+//   Serial.printf("joy: %d\n", joydir);
+// }
 
 ///////// GAME_PAIR //////////
 bool connect_wifi()
@@ -1046,7 +978,7 @@ bool battle_step()
   {
     return false;
   }
-  deserializeJson(doc, img_response);
+  deserializeJson(doc, response);
   player_hp = doc["move1"]["player_hp"];
   opponent_hp = doc["move1"]["opponent_hp"];
   player_new_hp = doc["move2"]["player_hp"];
@@ -1054,19 +986,6 @@ bool battle_step()
   strcpy(display_text[0], doc["move1"]["display_text"]);
   strcpy(display_text[1], doc["move2"]["display_text"]);
   return true;
-}
-
-uint8_t check_battle_end()
-{
-  if (player_hp = 0)
-  {
-    return LOSE;
-  }
-  if (opponent_hp = 0)
-  {
-    return WIN;
-  }
-  return CONT;
 }
 
 void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int ypos)
