@@ -472,6 +472,31 @@ void loop()
       tft.println("Scan ID to capture.");
       old_state = state;
     }
+    if (rfid.PICC_IsNewCardPresent())
+    { // new tag is available
+      if (rfid.PICC_ReadCardSerial())
+      { // NUID has been readed
+        // print UID in Serial Monitor in the hex format
+        Serial.print("UID:");
+        siz = 0;
+        for (int i = 0; i < rfid.uid.size; i++)
+        {
+          c[siz++] = HEXX(rfid.uid.uidByte[i] >> 4);
+          c[siz++] = HEXX(rfid.uid.uidByte[i] & 15);
+          c[siz++] = ' ';
+        }
+        c[siz - 1] = '\0';
+        Serial.println(c);
+        rfid.PICC_HaltA();      // halt PICC
+        rfid.PCD_StopCrypto1(); // stop encryption on PCD
+        catch_request(c, response_body);
+        tft.fillScreen(TFT_BLACK);
+        tft.setCursor(0, 0, 2);
+        tft.println(response_body);
+        tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
+        tft.println("Press to return.");
+      }
+    }
     if (joyb == 1)
     {
       state = START;
@@ -498,32 +523,6 @@ void loop()
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
         tft.println("Press Button 1 to start pairing with an opponent.");
         old_game_state = game_state;
-      }
-
-      if (rfid.PICC_IsNewCardPresent())
-      { // new tag is available
-        if (rfid.PICC_ReadCardSerial())
-        { // NUID has been readed
-          // print UID in Serial Monitor in the hex format
-          Serial.print("UID:");
-          siz = 0;
-          for (int i = 0; i < rfid.uid.size; i++)
-          {
-            c[siz++] = HEXX(rfid.uid.uidByte[i] >> 4);
-            c[siz++] = HEXX(rfid.uid.uidByte[i] & 15);
-            c[siz++] = ' ';
-          }
-          c[siz - 1] = '\0';
-          Serial.println(c);
-          rfid.PICC_HaltA();      // halt PICC
-          rfid.PCD_StopCrypto1(); // stop encryption on PCD
-          catch_request(c, response_body);
-          tft.fillScreen(TFT_BLACK);
-          tft.setCursor(0, 0, 2);
-          tft.println(response_body);
-          tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
-          tft.println("Press to return.");
-        }
       }
 
       if (joyb == 1)
@@ -576,6 +575,11 @@ void loop()
           if (!sync_ids(myid, temp))
           {
             Serial.println("Sync Failed");
+            tft.fillScreen(TFT_BLACK);
+            tft.setCursor(0, 0, 2);
+            tft.setTextColor(TFT_GREEN, TFT_BLACK);
+            tft.println("Broadcast Successful. But Sync failed. Try again.");
+            pair_state = PAIR_START;
           }
           else
           {
