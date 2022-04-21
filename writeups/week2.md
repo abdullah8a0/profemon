@@ -76,10 +76,10 @@ def get_profemon_image(name, size = 'big'):
 | Optimize      | physical    | normal   | 60  | 0.95 |
 | Clear Fog     | spec        | poison   | 50  | 0.95 |
 
-### Show battle being stepped through. 
-  * See video
-### Try to get HP bar display working without graphics issues.
-  * See video
+  ### Show battle being stepped through. 
+    * See video
+  ### Try to get HP bar display working without graphics issues.
+    * See video
 
 ## Heidi
 
