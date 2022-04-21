@@ -614,46 +614,6 @@ void loop()
   }
 }
 
-// void debug() {
-//   switch (joydir)
-//   {
-//   case NONE:
-//     // Serial.println("NONE");
-//     break;
-//   case JOYSTICK_UP:
-//     Serial.println("UP");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_DOWN:
-//
-//     Serial.println("DOWN");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_LEFT:
-//
-//     Serial.println("LEFT");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_RIGHT:
-//
-//     Serial.println("RIGHT");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//
-//   default:
-//     break;
-//   }
-//   Serial.printf("joy: %d\n", joydir);
-// }
-
 ///////// GAME_PAIR //////////
 bool connect_wifi()
 {
