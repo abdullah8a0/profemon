@@ -71,7 +71,7 @@ char json_body[JSON_BODY_SIZE];
 
 // game related variables
 StaticJsonDocument<500> doc;
-uint16_t game_id = 2;
+uint16_t game_id = 5;
 uint8_t user = 42;
 uint32_t timer = millis();
 uint32_t capture_timer = millis();
@@ -115,6 +115,7 @@ uint16_t opponent_hp;
 uint16_t opponent_new_hp;
 char display_text[2][100];
 uint8_t battle_result = 0;
+bool displayed_second_move = false;
 const uint8_t CONT = 0;
 const uint8_t WIN = 1;
 const uint8_t LOSE = 2;
@@ -264,7 +265,7 @@ void loop() {
             tft.fillScreen(TFT_BLACK);
             tft.setCursor(0, 0);
             tft.setTextColor(TFT_GREEN, TFT_BLACK);
-            tft.println("Press Button 1 to start pairing with an opponent.");
+            tft.println("Press to start pairing with an opponent.");
             old_game_state = game_state;
           }
           if(joyb == 1) {
@@ -404,26 +405,29 @@ void loop() {
                 old_battle_state = battle_state;
                 display_hp();
                 timer = millis();
+                displayed_second_move = false;
               }
 
-              if (millis() - timer > 3000) {
-                battle_result = check_battle_end();
-                if (battle_result > 0) {
-                  game_state = GAME_END;
-                  break;
-                }
+              if (millis() - timer > 3000 && displayed_second_move == false) {
+                displayed_second_move = true;
                 tft.fillRect(0, ym+img_h, w, h-img_h-ym, TFT_BLACK);
                 tft.setCursor(0, ym+img_h+10, 2);
                 tft.println(display_text[1]);
-                player_hp = player_new_hp;
-                opponent_hp = opponent_new_hp;
-                display_hp();
+                if (player_hp == 0) battle_result = LOSE;
+                else if (opponent_hp == 0) battle_result = WIN;
+                if (battle_result == CONT) {
+                  player_hp = player_new_hp;
+                  opponent_hp = opponent_new_hp;
+                  display_hp();
+                }
               }
 
               if (millis() - timer > 6000) {
-                battle_result = check_battle_end();
-                if (battle_result > 0) {
+                if (battle_result != CONT) {
                   game_state = GAME_END;
+                } else {
+                  if (player_hp == 0) battle_result = LOSE;
+                  else if (opponent_hp == 0) battle_result = WIN;
                 }
                 battle_state = BATTLE_MOVE;
               }
@@ -610,7 +614,7 @@ bool battle_step() {
   if (strstr(response, "wait") != NULL) {
     return false;
   }
-  deserializeJson(doc, img_response);
+  deserializeJson(doc, response);
   player_hp = doc["move1"]["player_hp"];
   opponent_hp = doc["move1"]["opponent_hp"];
   player_new_hp = doc["move2"]["player_hp"];
@@ -618,16 +622,6 @@ bool battle_step() {
   strcpy(display_text[0], doc["move1"]["display_text"]);
   strcpy(display_text[1], doc["move2"]["display_text"]);
   return true;
-}
-
-uint8_t check_battle_end() {
-  if (player_hp = 0) {
-    return LOSE;
-  }
-  if (opponent_hp = 0) {
-    return WIN;
-  }
-  return CONT;
 }
 
 void drawArrayJpeg(const uint8_t arrayname[], uint32_t array_size, int xpos, int ypos) {
