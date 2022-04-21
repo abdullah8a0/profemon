@@ -1,10 +1,85 @@
 # Week 2 Deliverables
 
+## Everyone
+### Show an integrated product in a video which can capture profemons and step through a game.
+!(Week 2 Everyone)[]
 ## Abdullah
 
 
 ## Andi & Ivy
+  ### Put images on server and enable image retrieval. 
+  *  We uploaded all of our images to the server, and then resize them as needed based on whether we are displaying for selection with `jpg2bin()` or for the battle displa with `jpg2bin_small()`. After we resize it, we convert the binary representation of the jpeg into base64 send it to the esp32.
+```python
+def jpg2bin(jpg_file, width=96, height=120):
+    img = Image.open(jpg_file)
+    img = img.resize((width, height))
+    output = io.BytesIO()
+    img.save(output, format='JPEG')
+    return output.getvalue()
 
+def jpg2bin_small(jpg_file, width=32, height=40):
+    img = Image.open(jpg_file)
+    img = img.resize((width, height))
+    output = io.BytesIO()
+    img.save(output, format='JPEG')
+    return output.getvalue()
+
+def get_profemon_image(name, size = 'big'):
+    file_name = '{}.jpg'.format(name)
+    file_path = os.path.join(dir_path,file_name)
+    binary = jpg2bin(file_path)
+    if size == 'small':
+        binary = jpg2bin_small(file_path)
+    encodedbin = base64.standard_b64encode(binary)
+    encodedbin = encodedbin.decode('ascii')
+    return len(binary), encodedbin
+```
+  ### Determining game mechanics amd create rudimentary battle stages on server for stepping through the game and returning the results to the devices. 
+  * Shown below is a FSM of battle steps since the code is too long to stuff into the writeup. 
+  1. A game is initated by a user sending a POST request with their user_id, a mutually agreed upon game_id, and their profemon name. Then their opponent must do the same. Once that happens, a game has begun on the server side.
+  2. Next, for the client to display the start state, both clients will send a GET request to the server to obtain the smaller Profemon images and their max HP. Now the battle is initatied on the client side.
+  3. Now both sides can select their moves and their ESPs will send POST requests to the server. After, the client will repeatedly query the server with GET requests until the server sends back the json file for the updated display. Meanwhile, the server will wait for both moves to be recieved before calculating damage and prepare two seperate json files to send to both players. There are two seperate files because we want both players to be able to view the battle from their own perspective. 
+  4. Then the third step will repeat until one of the profemon faints (hp <= 0). When this happens, the server will indicate this to the esps and clear the game data.
+  
+![Battle_FSM](https://i.imgur.com/Ca6OkfV.png)
+  
+  ### Designing Profemon moves/stats/etc.
+  * Profesors/instructors were associated with a pokemon, then assigned stats according to those pokemons' stats distributions if they were at Level 50 in game. Hence, every profemon is now unique in that sense. We wanted the Profemons to all be approximately the same strength, so we did adjust the stats a little as needed. We also made moves for each Profemon, borrowing from existing names and making up own based on puns and uploaded those to a databse in the server. We then uploaded these tables to a database in our server to use for calculating damage.
+  
+| cipher      | name              | hp  | atk | def | spatk | spdef | spd | move1        | move2        | move3         | move4     |
+|-------------|-------------------|-----|-----|-----|-------|-------|-----|--------------|--------------|---------------|-----------|
+| 0E 14 4B A6 | JoeSteinmeyer     | 108 | 68  | 53  | 63    | 63    | 103 | Double Team  | Volt Switch  | Signal Beam   | Confuse   |
+| 0E 3E 4B A6 | AdamHartz         | 128 | 83  | 68  | 53    | 68    | 98  | Fury Swipes  | Astonish     | Recurse       | Bind      |
+| 1E 7F 71 A6 | PattiChristie     | 93  | 23  | 243 | 23    | 243   | 18  | Hyper Voice  | Sludge Bomb  | Absolute Zero | Confuse   |
+| 43 81 40 86 | SaraEllison       | 133 | 68  | 68  | 58    | 58    | 73  | Future Sight | Confuse      | Optimize      | Clear Fog |
+| 8D BB 6D D5 | MohamedAbdelhafez | 113 | 68  | 93  | 48    | 73    | 43  | Gravity      | Flash Cannon | Magnet Beam   | Confuse   |
+| 93 41 30 A7 | TestSubject       | 1   | 1   | 1   | 1     | 1     | 1   | Confuse      | Astonish     | Optimize      | Clear Fog |
+
+
+| move_name     | phy_or_spec | type     | pow | acc  |
+|---------------|-------------|----------|-----|------|
+| Fury Swipes   | phy         | normal   | 60  | 0.95 |
+| Astonish      | spec        | psychic  | 50  | 0.95 |
+| Recurse       | spec        | psychic  | 50  | 0.95 |
+| Bind          | spec        | normal   | 50  | 0.95 |
+| Double Team   | phy         | normal   | 50  | 0.95 |
+| Volt Switch   | spec        | electric | 70  | 0.95 |
+| Signal Beam   | spec        | steel    | 75  | 0.95 |
+| Gravity       | spec        | psychic  | 90  | 0.95 |
+| Flash Cannon  | spec        | steel    | 80  | 0.95 |
+| Magnet Beam   | spec        | steel    | 60  | 0.95 |
+| Hyper Voice   | spec        | normal   | 90  | 0.95 |
+| Sludge Bomb   | phy         | poison   | 90  | 0.95 |
+| Absolute Zero | spec        | ice      | 300 | 0.30 |
+| Confuse       | spec        | psychic  | 65  | 0.95 |
+| Future Sight  | spec        | psychic  | 70  | 0.95 |
+| Optimize      | physical    | normal   | 60  | 0.95 |
+| Clear Fog     | spec        | poison   | 50  | 0.95 |
+
+### Show battle being stepped through. 
+  * See video
+### Try to get HP bar display working without graphics issues.
+  * See video
 
 ## Heidi
 
