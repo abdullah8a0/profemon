@@ -497,6 +497,7 @@ void loop()
     case GAME_BATTLE:
       if (old_game_state != game_state)
       {
+        battle_result = CONT;
         old_game_state = game_state;
         // free memory used to store profemon images
         for (int i = 0; i < profemon_count; i++)
@@ -582,30 +583,21 @@ void loop()
           tft.fillRect(0, ym + img_h, w, h - (img_h + ym) * 2, TFT_BLACK);
           tft.setCursor(0, ym + img_h + 10, 2);
           tft.println(display_text[1]);
-          if (player_hp == 0)
+          player_hp = player_new_hp;
+          opponent_hp = opponent_new_hp;
+          display_hp();
+          if (player_hp == 0) {
             battle_result = LOSE;
-          else if (opponent_hp == 0)
+          } else if (opponent_hp == 0) {
             battle_result = WIN;
-          if (battle_result == CONT)
-          {
-            player_hp = player_new_hp;
-            opponent_hp = opponent_new_hp;
-            display_hp();
           }
         }
-        Serial.printf("time: %d\n", millis() - timer);
+
         if (millis() - timer > 6000)
         {
           if (battle_result != CONT)
           {
             game_state = GAME_END;
-          }
-          else
-          {
-            if (player_hp == 0)
-              battle_result = LOSE;
-            else if (opponent_hp == 0)
-              battle_result = WIN;
           }
           battle_state = BATTLE_MOVE;
         }
