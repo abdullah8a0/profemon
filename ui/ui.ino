@@ -12,6 +12,7 @@
 
 #include "http_req.h"
 #include "util.h"
+#include <map>
 
 // tft
 TFT_eSPI tft = TFT_eSPI();
@@ -122,6 +123,20 @@ const uint8_t CONT = 0;
 const uint8_t WIN = 1;
 const uint8_t LOSE = 2;
 
+// std::map <joystick_direction, uint8_t*> dir_map;
+// {
+//     {NONE, {0, 1, 2, 3},
+//     {JOYSTICK_UP, {0, 1, 0, 1}},
+//     {JOYSTICK_DOWN, {2, 3, 2, 3}},
+//     {JOYSTICK_LEFT, {0, 0, 2, 2}},
+//     {JOYSTICK_RIGHT, {1, 1, 3, 3}}
+// }
+
+uint8_t dir_map_up[4] = {0, 1, 0, 1};
+uint8_t dir_map_down[4] = {2, 3, 2, 3};
+uint8_t dir_map_left[4] = {0, 0, 2, 2};
+uint8_t dir_map_right[4] = {1, 1, 3, 3};
+
 // ui constants
 const uint8_t xm = 4; // width margin
 const uint8_t ym = 4; // height margin
@@ -189,13 +204,12 @@ void setup()
   pinMode(Sw, INPUT_PULLUP);
 }
 
-char *myid = make_id(user); // TODO: change this to the actual id @Heidi
+char *myid = make_id(user);
 char *other_id = (char *)malloc(sizeof(char) * 5);
 char *temp = (char *)malloc(sizeof(char) * 20);
 
 void loop()
 {
-  Serial.printf("battle state: %d\n", battle_state);
   joystick_direction joydir = joystick.update();
   uint8_t joyb = joystick.Sw_val;
   switch (state)
@@ -283,8 +297,12 @@ void loop()
       tft.setCursor(0, 0, 2);
       tft.setTextColor(TFT_GREEN, TFT_BLACK);
       old_state = state;
-      old_game_state = GAME_BATTLE;
-      game_state = GAME_START;
+      if (not user_has_profemons()){
+        state = START;
+      } else {
+        old_game_state = GAME_BATTLE;
+        game_state = GAME_START;
+      }
     }
     switch (game_state)
     {
@@ -493,21 +511,25 @@ void loop()
       case BATTLE_MOVE:
         if (old_battle_state != battle_state)
         {
+          curr_move = 0;
           tft.fillRect(0, ym + img_h, w, h - 2 * (img_h + ym), TFT_BLACK);
           select_move(curr_move);
           old_battle_state = battle_state;
         }
-        if (joydir == JOYSTICK_RIGHT)
-        {
-          curr_move = (curr_move + 1) % 4;
+        if (joydir == JOYSTICK_UP) {
+          curr_move = dir_map_up[curr_move];
+        } else if (joydir == JOYSTICK_DOWN) {
+          curr_move = dir_map_down[curr_move];
+        } else if (joydir == JOYSTICK_RIGHT) {
+          curr_move = dir_map_right[curr_move];
+        } else if (joydir == JOYSTICK_LEFT) {
+          curr_move = dir_map_left[curr_move];
+        }
+        if (joydir != NONE) {
           select_move(curr_move);
         }
-        else if (joydir == JOYSTICK_LEFT)
-        {
-          curr_move = (curr_move - 1 + 4) % 4;
-          select_move(curr_move);
-        }
-        else if (joyb == 1)
+
+        if (joyb == 1)
         {
           send_move(curr_move);
           if (battle_step())
@@ -551,6 +573,7 @@ void loop()
           old_battle_state = battle_state;
           display_hp();
           displayed_second_move = false;
+          timer = millis();
         }
 
         if (millis() - timer > 3000 && displayed_second_move == false)
@@ -596,7 +619,15 @@ void loop()
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("You won!");
+        if (battle_result == WIN)
+        {
+          tft.println("You won!");
+        }
+        else if (battle_result == LOSE)
+        {
+          tft.println("You lost!");
+        }
+        tft.println("\n\nPress to return to the main menu");
         old_game_state = game_state;
 
         // free memory used for battle images
@@ -769,6 +800,22 @@ bool sync_ids(char *my_id, char *game_id)
 }
 
 ///////// GAME_SELECT //////////
+
+bool user_has_profemons()
+{
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%d&len=true HTTP/1.1\r\n", user);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  if (atoi(response) < 50)
+  {
+    tft.println("You don't have any profemons yet...");
+    delay(3000);
+    return false;
+  } else {
+    return true;
+  }
+}
 
 void get_profemons()
 {
