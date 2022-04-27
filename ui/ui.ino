@@ -75,7 +75,7 @@ char json_body[JSON_BODY_SIZE];
 // game related variables
 StaticJsonDocument<500> doc;
 uint16_t game_id = 2;
-uint8_t user = 42;
+uint8_t user = 40;
 uint32_t timer = millis();
 uint32_t capture_timer = millis();
 
