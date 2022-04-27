@@ -2,7 +2,7 @@
 
 ## Everyone
 ### Show an integrated product in a video which can capture profemons and step through a game.
-!(Week 2 Everyone)[]
+!(Week 2 Everyone)[https://youtu.be/0OERUU5kmrU]
 
 ## Abdullah & Andi & Ivy
   ### Use the dual AP/Station mode in the ESP32 to speed up the handshake by concurrency, integrate with serverside code
