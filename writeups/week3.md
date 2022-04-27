@@ -2,8 +2,6 @@
 
 ## Abdullah
 
-## Andi & Heidi
-
 ## Ivy
 ### Profeball shell printed
 ![Profeball!](https://s7.gifyu.com/images/profeball.gif)
@@ -26,3 +24,15 @@ I tested the dimensions by printing on a 1:1 scale on paper and cutting it out. 
 ![Cutouts for Paper](https://i.imgur.com/rK5Wxhp.png)
 
 I'm thinking of wanting to frost or paint the arylic so you can't see the electronics inside, but I need to lasercut some non-paper prototypes first.
+
+## Andi & Heidi
+[demo video](https://youtu.be/xul82FiG2Hg)
+
+Client side:
+- we smoothed out the transition between different battle stages and made sure that all the ui elements display correctly, e.g., images stay on the screen, HP bars update properly, etc.
+- We improved the joystick class so that now if the joystick is held down in the same direction for a period of time, the device would consider that as multiple presses in that direction spaced out by a certain amount of time.
+
+Server side:
+- Updated the damage calculation formula from using random numbers to using the actual pokemon game formula taking consideration of the power and accuracy of the moves, and the attack and defense of the profemons.
+- Fixed some synchronization issues with the server and client.
+- Refactored the code to make it more readable and modular.
