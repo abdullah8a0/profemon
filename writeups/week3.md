@@ -7,6 +7,7 @@
 ## Ivy
 ### Profeball shell printed
 ![Profeball!](https://s7.gifyu.com/images/profeball.gif)
+![Youtube Profeball! Link](https://youtube.com/shorts/HkVvfpYBmuw?feature=share)
 
 ### Progress made on electronics mountings (cad drawings, dxf files showing plans).
 I dimensioned the holes and outermost plates for either side of the Profeball. Because of that, it's now very easy to make adjustments to where we want those electronics placed if we want to move them/how big the plates are/make new plates. 
