@@ -142,12 +142,20 @@ const uint8_t box_y[] = {h / 2 - yb - 2, h / 2 - yb - 2, h / 2 + 2, h / 2 + 2};
 
 #define HOSTING_TIMEOUT_MS 5000
 
+char *myid = make_id(user); // TODO: change this to the actual id @Heidi
 void setup()
 {
   Serial.begin(115200); // for debugging if needed.
   SPI.begin();          // init SPI bus
   rfid.PCD_Init();      // init MFRC522
 
+  WiFi.mode(WIFI_STA_AP);
+  char *ssid = (char *)malloc(sizeof(char) * 13);
+  strcpy(ssid, "Profemon");
+  strcat(ssid, myid);
+  char wifi_pass[] = "Profemon";
+  WiFi.softAP(ssid, wifi_pass);
+  free(ssid);
   WiFi.begin(network, password); // attempt to connect to wifi
   uint8_t count = 0;             // count used for Wifi check times
   Serial.print("Attempting to connect to ");
@@ -174,6 +182,9 @@ void setup()
     ESP.restart(); // restart the ESP (proper way)
   }
 
+
+
+  
   tft.begin();
   tft.setRotation(2);
   tft.setTextSize(1);
@@ -189,7 +200,6 @@ void setup()
   pinMode(Sw, INPUT_PULLUP);
 }
 
-char *myid = make_id(user); // TODO: change this to the actual id @Heidi
 char *other_id = (char *)malloc(sizeof(char) * 5);
 char *temp = (char *)malloc(sizeof(char) * 20);
 
@@ -685,21 +695,21 @@ bool connect_wifi()
 bool broadcast(char *my_id)
 { // TODO: boadcast while syncing. stop boradcasting if sync is done.
 
-  char *ssid = (char *)malloc(sizeof(char) * 13);
-  strcpy(ssid, "Profemon");
-  strcat(ssid, my_id);
+  // char *ssid = (char *)malloc(sizeof(char) * 13);
+  // strcpy(ssid, "Profemon");
+  // strcat(ssid, my_id);
 
-  char wifi_pass[] = "Profemon";
+  // char wifi_pass[] = "Profemon";
 
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(ssid, wifi_pass);
+  // WiFi.mode(WIFI_AP);
+  // WiFi.softAP(ssid, wifi_pass);
   int start_time = millis();
   while (millis() - start_time < HOSTING_TIMEOUT_MS)
   {
   }
-  free(ssid);
-  WiFi.disconnect();
-  WiFi.mode(WIFI_STA);
+  // free(ssid);
+  // WiFi.disconnect();
+  // WiFi.mode(WIFI_STA);
   return true;
   // if (connect_wifi())
   // {
