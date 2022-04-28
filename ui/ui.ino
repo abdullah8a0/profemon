@@ -12,6 +12,7 @@
 
 #include "http_req.h"
 #include "util.h"
+#include <map>
 
 // tft
 TFT_eSPI tft = TFT_eSPI();
@@ -122,13 +123,27 @@ const uint8_t CONT = 0;
 const uint8_t WIN = 1;
 const uint8_t LOSE = 2;
 
+// std::map <joystick_direction, uint8_t*> dir_map;
+// {
+//     {NONE, {0, 1, 2, 3},
+//     {JOYSTICK_UP, {0, 1, 0, 1}},
+//     {JOYSTICK_DOWN, {2, 3, 2, 3}},
+//     {JOYSTICK_LEFT, {0, 0, 2, 2}},
+//     {JOYSTICK_RIGHT, {1, 1, 3, 3}}
+// }
+
+uint8_t dir_map_up[4] = {0, 1, 0, 1};
+uint8_t dir_map_down[4] = {2, 3, 2, 3};
+uint8_t dir_map_left[4] = {0, 0, 2, 2};
+uint8_t dir_map_right[4] = {1, 1, 3, 3};
+
 // ui constants
 const uint8_t xm = 4; // width margin
 const uint8_t ym = 4; // height margin
 const uint8_t w = tft.width();
 const uint8_t h = tft.height();
 const uint8_t img_w = 32;
-const uint8_t img_h = 40;
+const uint8_t img_h = 42;
 const uint8_t bar_len = w - 2 * xm - img_w;
 const uint8_t bar_h = 8;
 const uint8_t xo = 4;                                       // text offset x
@@ -205,7 +220,6 @@ char *temp = (char *)malloc(sizeof(char) * 20);
 
 void loop()
 {
-  Serial.printf("battle state: %d\n", battle_state);
   joystick_direction joydir = joystick.update();
   uint8_t joyb = joystick.Sw_val;
   switch (state)
@@ -293,8 +307,12 @@ void loop()
       tft.setCursor(0, 0, 2);
       tft.setTextColor(TFT_GREEN, TFT_BLACK);
       old_state = state;
-      old_game_state = GAME_BATTLE;
-      game_state = GAME_START;
+      if (not user_has_profemons()){
+        state = START;
+      } else {
+        old_game_state = GAME_BATTLE;
+        game_state = GAME_START;
+      }
     }
     switch (game_state)
     {
@@ -489,6 +507,7 @@ void loop()
     case GAME_BATTLE:
       if (old_game_state != game_state)
       {
+        battle_result = CONT;
         old_game_state = game_state;
         // free memory used to store profemon images
         for (int i = 0; i < profemon_count; i++)
@@ -503,21 +522,25 @@ void loop()
       case BATTLE_MOVE:
         if (old_battle_state != battle_state)
         {
+          curr_move = 0;
           tft.fillRect(0, ym + img_h, w, h - 2 * (img_h + ym), TFT_BLACK);
           select_move(curr_move);
           old_battle_state = battle_state;
         }
-        if (joydir == JOYSTICK_RIGHT)
-        {
-          curr_move = (curr_move + 1) % 4;
+        if (joydir == JOYSTICK_UP) {
+          curr_move = dir_map_up[curr_move];
+        } else if (joydir == JOYSTICK_DOWN) {
+          curr_move = dir_map_down[curr_move];
+        } else if (joydir == JOYSTICK_RIGHT) {
+          curr_move = dir_map_right[curr_move];
+        } else if (joydir == JOYSTICK_LEFT) {
+          curr_move = dir_map_left[curr_move];
+        }
+        if (joydir != NONE) {
           select_move(curr_move);
         }
-        else if (joydir == JOYSTICK_LEFT)
-        {
-          curr_move = (curr_move - 1 + 4) % 4;
-          select_move(curr_move);
-        }
-        else if (joyb == 1)
+
+        if (joyb == 1)
         {
           send_move(curr_move);
           if (battle_step())
@@ -554,45 +577,37 @@ void loop()
       case BATTLE_UPDATE:
         if (old_battle_state != battle_state)
         {
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.fillRect(0, ym + img_h, w, h - (img_h + ym) * 2, TFT_BLACK);
           tft.setCursor(0, ym + img_h + 10, 2);
           tft.setTextColor(TFT_WHITE, TFT_BLACK);
           tft.println(display_text[0]);
           old_battle_state = battle_state;
           display_hp();
           displayed_second_move = false;
+          timer = millis();
         }
 
         if (millis() - timer > 3000 && displayed_second_move == false)
         {
           displayed_second_move = true;
-          tft.fillRect(0, ym + img_h, w, h - img_h - ym, TFT_BLACK);
+          tft.fillRect(0, ym + img_h, w, h - (img_h + ym) * 2, TFT_BLACK);
           tft.setCursor(0, ym + img_h + 10, 2);
           tft.println(display_text[1]);
-          if (player_hp == 0)
+          player_hp = player_new_hp;
+          opponent_hp = opponent_new_hp;
+          display_hp();
+          if (player_hp == 0) {
             battle_result = LOSE;
-          else if (opponent_hp == 0)
+          } else if (opponent_hp == 0) {
             battle_result = WIN;
-          if (battle_result == CONT)
-          {
-            player_hp = player_new_hp;
-            opponent_hp = opponent_new_hp;
-            display_hp();
           }
         }
-        Serial.printf("time: %d\n", millis() - timer);
+
         if (millis() - timer > 6000)
         {
           if (battle_result != CONT)
           {
             game_state = GAME_END;
-          }
-          else
-          {
-            if (player_hp == 0)
-              battle_result = LOSE;
-            else if (opponent_hp == 0)
-              battle_result = WIN;
           }
           battle_state = BATTLE_MOVE;
         }
@@ -606,7 +621,15 @@ void loop()
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.println("You won!");
+        if (battle_result == WIN)
+        {
+          tft.println("You won!");
+        }
+        else if (battle_result == LOSE)
+        {
+          tft.println("You lost!");
+        }
+        tft.println("\n\nPress to return to the main menu");
         old_game_state = game_state;
 
         // free memory used for battle images
@@ -623,46 +646,6 @@ void loop()
     break;
   }
 }
-
-// void debug() {
-//   switch (joydir)
-//   {
-//   case NONE:
-//     // Serial.println("NONE");
-//     break;
-//   case JOYSTICK_UP:
-//     Serial.println("UP");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_DOWN:
-//
-//     Serial.println("DOWN");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_LEFT:
-//
-//     Serial.println("LEFT");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//   case JOYSTICK_RIGHT:
-//
-//     Serial.println("RIGHT");
-//     Serial.printf("game: %d\n", game_state);
-//     Serial.printf("pair: %d\n", pair_state);
-//     Serial.printf("state: %d\n", state);
-//     break;
-//
-//   default:
-//     break;
-//   }
-//   Serial.printf("joy: %d\n", joydir);
-// }
 
 ///////// GAME_PAIR //////////
 bool connect_wifi()
@@ -819,6 +802,22 @@ bool sync_ids(char *my_id, char *game_id)
 }
 
 ///////// GAME_SELECT //////////
+
+bool user_has_profemons()
+{
+  memset(request_buffer, 0, sizeof(request_buffer));
+  sprintf(request_buffer, "GET /sandbox/sc/team5/get_profemons.py?user=%d&len=true HTTP/1.1\r\n", user);
+  strcat(request_buffer, "Host: 608dev-2.net\r\n\r\n");
+  do_http_request("608dev-2.net", request_buffer, response, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+  if (atoi(response) < 50)
+  {
+    tft.println("You don't have any profemons yet...");
+    delay(3000);
+    return false;
+  } else {
+    return true;
+  }
+}
 
 void get_profemons()
 {
