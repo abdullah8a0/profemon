@@ -184,12 +184,12 @@ int8_t capture_riff[] = {9, 9, 9, 99, 5, 5, 5, 99, 0, 0, 0, 0, 0, 0, 0, 99, 10, 
 int capture_riff_length = sizeof capture_riff / sizeof capture_riff[0];
 double capture_duration = 94;
 
-int8_t direction_riff[] = {-4};
-int direction_riff_length = 1;
+int8_t direction_riff[] = {-4, 99};
+int direction_riff_length = 2;
 double direction_duration = 50;
 
-int8_t select_riff[] = {12};
-int select_riff_length = 1;
+int8_t select_riff[] = {12, 99};
+int select_riff_length = 2;
 double select_duration = 50;
 
 
@@ -233,6 +233,12 @@ void setup()
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
+  double note_freq = A_1;
+  //fill in note_freq with appropriate frequencies from 55 Hz to 55*(MULT)^{NOTE_COUNT-1} Hz
+  for(int i = 0;i < NOTE_COUNT;i++)
+    note_freqs[i] = note_freq * pow(MULT,i);
+  new_note = note_freqs[36];
+
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
 
@@ -258,7 +264,7 @@ void loop()
   if (joydir != NONE) {
     play_riff(direction_riff, direction_riff_length, direction_duration);
   }
-  if (joyb == 0) {
+  if (joyb == 1) {
     play_riff(select_riff, select_riff_length, select_duration);
   }
   switch (state)
@@ -719,6 +725,7 @@ void play_riff(int8_t* notes_song_to_play, int length_of_song, double duration)
   for(int i = 0;i < song_to_play.length;i++)
   {
     double this_note = song_to_play.notes[i];
+    Serial.println(this_note);
     if(this_note - last_note < -0.01 || this_note - last_note > 0.01)
       ledcWriteTone(AUDIO_PWM, this_note);
     delay(song_to_play.note_period);
