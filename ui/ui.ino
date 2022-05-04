@@ -153,7 +153,45 @@ const uint8_t yb = 30;                                      // move box height
 const uint8_t box_x[] = {xm, w - xm - xb, xm, w - xm - xb}; // move boxes
 const uint8_t box_y[] = {h / 2 - yb - 2, h / 2 - yb - 2, h / 2 + 2, h / 2 + 2};
 
-// #include "http_req.h"
+// buzzer audio
+double A_1 = 55; //A_1 55 Hz  for note generation
+const uint8_t NOTE_COUNT = 97; //number of notes set at six octaves from
+
+struct Riff {
+  double notes[256];
+  int length;
+  float note_period;
+};
+
+float new_note = 0;
+float old_note = 0;
+double MULT = 1.059463094359;
+
+//pins for LCD and AUDIO CONTROL
+uint8_t LCD_CONTROL = 21;
+uint8_t AUDIO_TRANSDUCER = 14;
+
+//PWM Channels. The LCD will still be controlled by channel 0, we'll use channel 1 for audio generation
+uint8_t LCD_PWM = 0;
+uint8_t AUDIO_PWM = 1;
+
+//arrays you need to prepopulate for use in the run_instrument() function
+double note_freqs[NOTE_COUNT];
+float accel_thresholds[NOTE_COUNT + 1];
+
+// riffs
+int8_t capture_riff[] = {9, 9, 9, 99, 5, 5, 5, 99, 0, 0, 0, 0, 0, 0, 0, 99, 10, 99, 10, 99, 10, 99, 7, 7, 7, 99, 10, 99, 9, 9, 9, 9, 9, 9, 9, 99};
+int capture_riff_length = sizeof capture_riff / sizeof capture_riff[0];
+double capture_duration = 94;
+
+int8_t direction_riff[] = {-4};
+int direction_riff_length = 1;
+double direction_duration = 50;
+
+int8_t select_riff[] = {12};
+int select_riff_length = 1;
+double select_duration = 50;
+
 
 #define HOSTING_TIMEOUT_MS 5000
 
@@ -198,6 +236,11 @@ void setup()
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
 
+  pinMode(AUDIO_TRANSDUCER, OUTPUT);
+  ledcSetup(AUDIO_PWM, 200, 12);//12 bits of PWM precision
+  ledcWrite(AUDIO_PWM, 0); //0 is a 0% duty cycle for the NFET
+  ledcAttachPin(AUDIO_TRANSDUCER, AUDIO_PWM);
+
   analogReadResolution(10);
   pinMode(VRx, INPUT);
   pinMode(VRy, INPUT);
@@ -212,6 +255,12 @@ void loop()
 {
   joystick_direction joydir = joystick.update();
   uint8_t joyb = joystick.Sw_val;
+  if (joydir != NONE) {
+    play_riff(direction_riff, direction_riff_length, direction_duration);
+  }
+  if (joyb == 0) {
+    play_riff(select_riff, select_riff_length, select_duration);
+  }
   switch (state)
   {
   case START:
@@ -255,8 +304,9 @@ void loop()
     {
       tft.fillScreen(TFT_BLACK);
       tft.setCursor(0, 0, 2);
-      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
       tft.println("Scan ID to capture.");
+      tft.println("\nPress to return.");
       old_state = state;
     }
     if (rfid.PICC_IsNewCardPresent())
@@ -279,8 +329,12 @@ void loop()
         catch_request(c, response_body);
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         tft.println(response_body);
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
         tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
+        play_riff(capture_riff, capture_riff_length, capture_duration);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         tft.println("Press to return.");
       }
     }
@@ -634,6 +688,41 @@ void loop()
       break;
     }
     break;
+  }
+}
+
+///////// audio //////////////
+Riff make_riff(int8_t *d, int length, double duration)
+{
+  Riff newRiff;
+  for(int i = 0;i < length;i++)
+  {
+    if(d[i] >= 100 || d[i] < -100)
+    {
+      int actual = d[i] > 100 ? d[i] - 100 : d[i] + 100;
+      newRiff.notes[i] = -new_note * pow(MULT,actual);
+    }
+    else if(d[i] != 99)
+      newRiff.notes[i] = new_note * pow(MULT,d[i]);
+    else
+      newRiff.notes[i] = 0;
+  }
+  newRiff.length = length;
+  newRiff.note_period = duration;
+  return newRiff;
+}
+
+void play_riff(int8_t* notes_song_to_play, int length_of_song, double duration)
+{
+  double last_note = 0;
+  Riff song_to_play = make_riff(notes_song_to_play, length_of_song, duration);
+  for(int i = 0;i < song_to_play.length;i++)
+  {
+    double this_note = song_to_play.notes[i];
+    if(this_note - last_note < -0.01 || this_note - last_note > 0.01)
+      ledcWriteTone(AUDIO_PWM, this_note);
+    delay(song_to_play.note_period);
+    last_note = this_note;
   }
 }
 
