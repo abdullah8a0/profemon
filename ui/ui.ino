@@ -188,9 +188,29 @@ int8_t direction_riff[] = {-4, 99};
 int direction_riff_length = 2;
 double direction_duration = 50;
 
-int8_t select_riff[] = {12, 99};
-int select_riff_length = 2;
+int8_t select_riff[] = {23, 28, 99};
+int select_riff_length = 3;
 double select_duration = 50;
+
+int8_t miss_riff[] = {19, 18, 17, 16, 16, 16, 99};
+int miss_riff_length = sizeof miss_riff / sizeof miss_riff[0];
+double miss_duration = 120;
+
+int8_t attack_riff[] = {14, 18, 99};
+int attack_riff_length = sizeof attack_riff / sizeof attack_riff[0];
+double attack_duration = 120;
+
+int8_t faint_riff[] = {14, 14, 10, 99, 14, 14, 10, 10, 10, 10, 10, 99};
+int faint_riff_length = sizeof faint_riff / sizeof faint_riff[0];
+double faint_duration = 100;
+
+int8_t win_riff[] = {16, 18, 20, 21, 23, 23, 27, 27, 28, 28, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 99};
+int win_riff_length = sizeof win_riff / sizeof win_riff[0];
+double win_duration = 80;
+
+int8_t lose_riff[] = {5, 5, 5, 5, 6, 6, 5, 5, 5, 5, 0, 0, 3, 3, 3, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 99};
+int lose_riff_length = sizeof lose_riff / sizeof lose_riff[0];
+double lose_duration = 80;
 
 
 #define HOSTING_TIMEOUT_MS 5000
@@ -237,7 +257,7 @@ void setup()
   //fill in note_freq with appropriate frequencies from 55 Hz to 55*(MULT)^{NOTE_COUNT-1} Hz
   for(int i = 0;i < NOTE_COUNT;i++)
     note_freqs[i] = note_freq * pow(MULT,i);
-  new_note = note_freqs[36];
+  new_note = note_freqs[39];
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
@@ -341,7 +361,7 @@ void loop()
         tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
         play_riff(capture_riff, capture_riff_length, capture_duration);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        tft.println("Press to return.");
+        tft.println("\nPress to return.");
       }
     }
     if (joyb == 1)
@@ -635,6 +655,14 @@ void loop()
           display_hp();
           displayed_second_move = false;
           timer = millis();
+          if (strstr("faint", display_text[0]) != NULL)
+          {
+            play_riff(faint_riff, faint_riff_length, faint_duration);
+          } else if (strstr("miss", display_text[0]) != NULL) {
+            play_riff(miss_riff, miss_riff_length, miss_duration);
+          } else {
+            play_riff(attack_riff, attack_riff_length, attack_duration);
+          }
         }
 
         if (millis() - timer > 3000 && displayed_second_move == false)
@@ -650,6 +678,14 @@ void loop()
             battle_result = LOSE;
           } else if (opponent_hp == 0) {
             battle_result = WIN;
+          }
+          if (strstr("faint", display_text[1]) != NULL)
+          {
+            play_riff(faint_riff, faint_riff_length, faint_duration);
+          } else if (strstr("miss", display_text[1]) != NULL) {
+            play_riff(miss_riff, miss_riff_length, miss_duration);
+          } else {
+            play_riff(attack_riff, attack_riff_length, attack_duration);
           }
         }
 
@@ -669,15 +705,17 @@ void loop()
       if (old_game_state != game_state)
       {
         tft.fillScreen(TFT_BLACK);
-        tft.setCursor(0, 0, 2);
-        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.setCursor(30, 48, 2);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         if (battle_result == WIN)
         {
-          tft.println("You won!");
+          tft.println("YOU WON!");
+          play_riff(win_riff, win_riff_length, win_duration);
         }
         else if (battle_result == LOSE)
         {
-          tft.println("You lost!");
+          tft.println("YOU LOST!");
+          play_riff(lose_riff, lose_riff_length, lose_duration);
         }
         tft.println("\n\nPress to return to the main menu");
         old_game_state = game_state;
