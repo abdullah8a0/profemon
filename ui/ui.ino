@@ -655,10 +655,10 @@ void loop()
           display_hp();
           displayed_second_move = false;
           timer = millis();
-          if (strstr("faint", display_text[0]) != NULL)
+          if (strstr(display_text[0], "faint") != NULL)
           {
             play_riff(faint_riff, faint_riff_length, faint_duration);
-          } else if (strstr("miss", display_text[0]) != NULL) {
+          } else if (strstr(display_text[0], "miss") != NULL) {
             play_riff(miss_riff, miss_riff_length, miss_duration);
           } else {
             play_riff(attack_riff, attack_riff_length, attack_duration);
@@ -679,10 +679,10 @@ void loop()
           } else if (opponent_hp == 0) {
             battle_result = WIN;
           }
-          if (strstr("faint", display_text[1]) != NULL)
+          if (strstr(display_text[1], "faint") != NULL)
           {
             play_riff(faint_riff, faint_riff_length, faint_duration);
-          } else if (strstr("miss", display_text[1]) != NULL) {
+          } else if (strstr(display_text[1], "miss") != NULL) {
             play_riff(miss_riff, miss_riff_length, miss_duration);
           } else {
             play_riff(attack_riff, attack_riff_length, attack_duration);
