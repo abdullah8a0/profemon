@@ -1,7 +1,16 @@
 # Week 3 Deliverables
 
 ## Abdullah
+
+The problem that I tackled was the unreliable switching between broadcasting and listening. Changing the WiFi mode dynamically caused the driver to crash and return error code -2. Then it would become impossible to play a game without a hard reset of the ESP. This can be fixed by modifying the protocol to work with the dynamic AP/station mode.
+
+The WiFi.h's WIFI_MODE_APSTA mode is used to create an access point that can be connected to by other devices, while also giving the capability to connect to a router as a station. The access point can be disconnected with WiFi.softAPdisconnect(). Using these primitives, we set the mode to APSTA and then we connect to the internet. When we start to broadcast, we turn on the access point for a period of time, at the end we disconnect. 
+
+Secondly, I implemented a serverside script 'sync.py' that coordinates the pairing. It generates a game_id for a pair of players and sends it to them. It also communicates with other serverside scripts to create a game.
+
 ### Assuming dual station mode works, rewrite parts of code that depend on single station mode so that pairing is less buggy.
+
+Not a lot of code depended on the single station mode. I didn't have to rewrite much of the code.
 
 ## Ivy
 ### Present Profeball example with electronics plates mounted inside and wiring to modules. Try to get the second one done barring issues with the 3D printer filament getting tangled in the middle of the night >:( 
