@@ -153,24 +153,76 @@ const uint8_t yb = 30;                                      // move box height
 const uint8_t box_x[] = {xm, w - xm - xb, xm, w - xm - xb}; // move boxes
 const uint8_t box_y[] = {h / 2 - yb - 2, h / 2 - yb - 2, h / 2 + 2, h / 2 + 2};
 
-// #include "http_req.h"
+// buzzer audio
+double A_1 = 55; //A_1 55 Hz  for note generation
+const uint8_t NOTE_COUNT = 97; //number of notes set at six octaves from
+
+struct Riff {
+  double notes[256];
+  int length;
+  float note_period;
+};
+
+float new_note = 0;
+float old_note = 0;
+double MULT = 1.059463094359;
+
+//pins for LCD and AUDIO CONTROL
+uint8_t LCD_CONTROL = 21;
+uint8_t AUDIO_TRANSDUCER = 14;
+
+//PWM Channels. The LCD will still be controlled by channel 0, we'll use channel 1 for audio generation
+uint8_t LCD_PWM = 0;
+uint8_t AUDIO_PWM = 1;
+
+//arrays you need to prepopulate for use in the run_instrument() function
+double note_freqs[NOTE_COUNT];
+float accel_thresholds[NOTE_COUNT + 1];
+
+// riffs
+int8_t capture_riff[] = {9, 9, 9, 99, 5, 5, 5, 99, 0, 0, 0, 0, 0, 0, 0, 99, 10, 99, 10, 99, 10, 99, 7, 7, 7, 99, 10, 99, 9, 9, 9, 9, 9, 9, 9, 99};
+int capture_riff_length = sizeof capture_riff / sizeof capture_riff[0];
+double capture_duration = 94;
+
+int8_t direction_riff[] = {-4, 99};
+int direction_riff_length = 2;
+double direction_duration = 50;
+
+int8_t select_riff[] = {23, 28, 99};
+int select_riff_length = 3;
+double select_duration = 50;
+
+int8_t miss_riff[] = {19, 18, 17, 16, 16, 16, 99};
+int miss_riff_length = sizeof miss_riff / sizeof miss_riff[0];
+double miss_duration = 120;
+
+int8_t attack_riff[] = {14, 18, 99};
+int attack_riff_length = sizeof attack_riff / sizeof attack_riff[0];
+double attack_duration = 120;
+
+int8_t faint_riff[] = {14, 14, 10, 99, 14, 14, 10, 10, 10, 10, 10, 99};
+int faint_riff_length = sizeof faint_riff / sizeof faint_riff[0];
+double faint_duration = 100;
+
+int8_t win_riff[] = {16, 18, 20, 21, 23, 23, 27, 27, 28, 28, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 99};
+int win_riff_length = sizeof win_riff / sizeof win_riff[0];
+double win_duration = 80;
+
+int8_t lose_riff[] = {5, 5, 5, 5, 6, 6, 5, 5, 5, 5, 0, 0, 3, 3, 3, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 99};
+int lose_riff_length = sizeof lose_riff / sizeof lose_riff[0];
+double lose_duration = 80;
+
 
 #define HOSTING_TIMEOUT_MS 5000
 
-char *myid = make_id(user); // TODO: change this to the actual id @Heidi
 void setup()
 {
   Serial.begin(115200); // for debugging if needed.
   SPI.begin();          // init SPI bus
   rfid.PCD_Init();      // init MFRC522
 
-  WiFi.mode(WIFI_STA_AP);
-  char *ssid = (char *)malloc(sizeof(char) * 13);
-  strcpy(ssid, "Profemon");
-  strcat(ssid, myid);
-  char wifi_pass[] = "Profemon";
-  WiFi.softAP(ssid, wifi_pass);
-  free(ssid);
+  WiFi.mode(WIFI_MODE_APSTA);
+
   WiFi.begin(network, password); // attempt to connect to wifi
   uint8_t count = 0;             // count used for Wifi check times
   Serial.print("Attempting to connect to ");
@@ -197,17 +249,25 @@ void setup()
     ESP.restart(); // restart the ESP (proper way)
   }
 
-
-
-  
   tft.begin();
   tft.setRotation(2);
   tft.setTextSize(1);
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
+  double note_freq = A_1;
+  //fill in note_freq with appropriate frequencies from 55 Hz to 55*(MULT)^{NOTE_COUNT-1} Hz
+  for(int i = 0;i < NOTE_COUNT;i++)
+    note_freqs[i] = note_freq * pow(MULT,i);
+  new_note = note_freqs[39];
+
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
+
+  pinMode(AUDIO_TRANSDUCER, OUTPUT);
+  ledcSetup(AUDIO_PWM, 200, 12);//12 bits of PWM precision
+  ledcWrite(AUDIO_PWM, 0); //0 is a 0% duty cycle for the NFET
+  ledcAttachPin(AUDIO_TRANSDUCER, AUDIO_PWM);
 
   analogReadResolution(10);
   pinMode(VRx, INPUT);
@@ -215,6 +275,7 @@ void setup()
   pinMode(Sw, INPUT_PULLUP);
 }
 
+char *myid = make_id(user);
 char *other_id = (char *)malloc(sizeof(char) * 5);
 char *temp = (char *)malloc(sizeof(char) * 20);
 
@@ -222,6 +283,12 @@ void loop()
 {
   joystick_direction joydir = joystick.update();
   uint8_t joyb = joystick.Sw_val;
+  if (joydir != NONE) {
+    play_riff(direction_riff, direction_riff_length, direction_duration);
+  }
+  if (joyb == 1) {
+    play_riff(select_riff, select_riff_length, select_duration);
+  }
   switch (state)
   {
   case START:
@@ -265,8 +332,9 @@ void loop()
     {
       tft.fillScreen(TFT_BLACK);
       tft.setCursor(0, 0, 2);
-      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
       tft.println("Scan ID to capture.");
+      tft.println("\nPress to return.");
       old_state = state;
     }
     if (rfid.PICC_IsNewCardPresent())
@@ -289,9 +357,13 @@ void loop()
         catch_request(c, response_body);
         tft.fillScreen(TFT_BLACK);
         tft.setCursor(0, 0, 2);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         tft.println(response_body);
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
         tft.printf("\nLat: %.4f\nLon: %.4f\n", lat, lng);
-        tft.println("Press to return.");
+        play_riff(capture_riff, capture_riff_length, capture_duration);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.println("\nPress to return.");
       }
     }
     if (joyb == 1)
@@ -350,8 +422,6 @@ void loop()
       switch (pair_state)
       {
       case PAIR_START:
-        game_state = GAME_SELECT;
-        game_id = 20;
 
         if (joydir == JOYSTICK_LEFT)
         {
@@ -374,6 +444,7 @@ void loop()
         // do broadcast here
         if (broadcast(myid))
         {
+          WiFi.softAPdisconnect();
           Serial.println("Broadcast Successful");
           if (!sync_ids(myid, temp))
           {
@@ -585,6 +656,14 @@ void loop()
           display_hp();
           displayed_second_move = false;
           timer = millis();
+          if (strstr(display_text[0], "faint") != NULL)
+          {
+            play_riff(faint_riff, faint_riff_length, faint_duration);
+          } else if (strstr(display_text[0], "miss") != NULL) {
+            play_riff(miss_riff, miss_riff_length, miss_duration);
+          } else {
+            play_riff(attack_riff, attack_riff_length, attack_duration);
+          }
         }
 
         if (millis() - timer > 3000 && displayed_second_move == false)
@@ -600,6 +679,14 @@ void loop()
             battle_result = LOSE;
           } else if (opponent_hp == 0) {
             battle_result = WIN;
+          }
+          if (strstr(display_text[1], "faint") != NULL)
+          {
+            play_riff(faint_riff, faint_riff_length, faint_duration);
+          } else if (strstr(display_text[1], "miss") != NULL) {
+            play_riff(miss_riff, miss_riff_length, miss_duration);
+          } else {
+            play_riff(attack_riff, attack_riff_length, attack_duration);
           }
         }
 
@@ -619,15 +706,17 @@ void loop()
       if (old_game_state != game_state)
       {
         tft.fillScreen(TFT_BLACK);
-        tft.setCursor(0, 0, 2);
-        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        tft.setCursor(30, 48, 2);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         if (battle_result == WIN)
         {
-          tft.println("You won!");
+          tft.println("YOU WON!");
+          play_riff(win_riff, win_riff_length, win_duration);
         }
         else if (battle_result == LOSE)
         {
-          tft.println("You lost!");
+          tft.println("YOU LOST!");
+          play_riff(lose_riff, lose_riff_length, lose_duration);
         }
         tft.println("\n\nPress to return to the main menu");
         old_game_state = game_state;
@@ -644,6 +733,42 @@ void loop()
       break;
     }
     break;
+  }
+}
+
+///////// audio //////////////
+Riff make_riff(int8_t *d, int length, double duration)
+{
+  Riff newRiff;
+  for(int i = 0;i < length;i++)
+  {
+    if(d[i] >= 100 || d[i] < -100)
+    {
+      int actual = d[i] > 100 ? d[i] - 100 : d[i] + 100;
+      newRiff.notes[i] = -new_note * pow(MULT,actual);
+    }
+    else if(d[i] != 99)
+      newRiff.notes[i] = new_note * pow(MULT,d[i]);
+    else
+      newRiff.notes[i] = 0;
+  }
+  newRiff.length = length;
+  newRiff.note_period = duration;
+  return newRiff;
+}
+
+void play_riff(int8_t* notes_song_to_play, int length_of_song, double duration)
+{
+  double last_note = 0;
+  Riff song_to_play = make_riff(notes_song_to_play, length_of_song, duration);
+  for(int i = 0;i < song_to_play.length;i++)
+  {
+    double this_note = song_to_play.notes[i];
+    Serial.println(this_note);
+    if(this_note - last_note < -0.01 || this_note - last_note > 0.01)
+      ledcWriteTone(AUDIO_PWM, this_note);
+    delay(song_to_play.note_period);
+    last_note = this_note;
   }
 }
 
@@ -678,31 +803,18 @@ bool connect_wifi()
 bool broadcast(char *my_id)
 { // TODO: boadcast while syncing. stop boradcasting if sync is done.
 
-  // char *ssid = (char *)malloc(sizeof(char) * 13);
-  // strcpy(ssid, "Profemon");
-  // strcat(ssid, my_id);
-
-  // char wifi_pass[] = "Profemon";
-
-  // WiFi.mode(WIFI_AP);
-  // WiFi.softAP(ssid, wifi_pass);
+  char *ssid = (char *)malloc(sizeof(char) * 13);
+  strcpy(ssid, "Profemon");
+  strcat(ssid, myid);
+  char wifi_pass[] = "Profemon";
+  WiFi.softAP(ssid, wifi_pass);
+  free(ssid);
   int start_time = millis();
   while (millis() - start_time < HOSTING_TIMEOUT_MS)
   {
   }
-  // free(ssid);
-  // WiFi.disconnect();
-  // WiFi.mode(WIFI_STA);
+
   return true;
-  // if (connect_wifi())
-  // {
-  //   return true;
-  // }
-  // else
-  // {
-  //   return true;
-  //   return false;
-  // }
 }
 
 // returns a 4 character string of id
