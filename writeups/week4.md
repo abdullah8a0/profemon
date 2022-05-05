@@ -9,7 +9,7 @@
 
 Unfortunately the second one hasn't been assembled, although all the parts are printed and plates are laser cut. I did indeed have issues with the filament getting tangled in the middle of the night and coming in in the morning to a spagetti mess of filament.
 
-I also only had one ESP since my teammates needed theirs to test still, and it took a few hours to put together the first profeball between the snipping and soldering. I assume the second one would go faster now that I have had trial and error. 
+I also only had one ESP since my teammates needed theirs to test still, and it took quite a few hours to put together the first profeball between the snipping and soldering and dremeling (on the shell for the battery pack to fit). I assume the second one would go faster now that I have had trial and error. 
 
 ![Parts for Both Profeballs](https://imgur.com/a/B2M47RF)
 
