@@ -7,7 +7,9 @@
 ### Present Profeball example with electronics plates mounted inside and wiring to modules. Try to get the second one done barring issues with the 3D printer filament getting tangled in the middle of the night >:( 
 ![Assembled Profeball Tour](https://www.youtube.com/watch?v=zVC25HnnGds)
 
-Unfortunately the second one hasn't been assembled, although all the parts are printed and plates are laser cut. I only had one ESP since my teammates needed theirs to test still, and it took a few hours to put together the first profeball between the snipping and soldering. I assume the second one would go faster now that I have had trial and error. 
+Unfortunately the second one hasn't been assembled, although all the parts are printed and plates are laser cut. I did indeed have issues with the filament getting tangled in the middle of the night and coming in in the morning to a spagetti mess of filament.
+
+I also only had one ESP since my teammates needed theirs to test still, and it took a few hours to put together the first profeball between the snipping and soldering. I assume the second one would go faster now that I have had trial and error. 
 
 ![Parts for Both Profeballs](https://imgur.com/a/B2M47RF)
 
@@ -31,4 +33,42 @@ At Joe's suggestion, we went ahead and expanded the Profemon databse with some "
 | K8 23 LF 12 | GilbertStrang     | 93  | 38  | 58  | 83    | 103   | 73  | Mirror Force | Invert       | Reduce        | Diagonalize |
 ## Andi & Heidi
 ### Show video battle being stepped through with sound effect.
+
 ![Battle with sound](https://www.youtube.com/watch?v=iJIVGkFIWJU)
+
+After trying the MP3, we realized it didn't give us the retro sounds we wanted and was very bulky. So we went with using the buzzer. We made riffs that play after the player moves the joysticks and throughout the battle sequence based off the sounds in Pokemon.
+
+```cpp
+// riffs
+int8_t capture_riff[] = {9, 9, 9, 99, 5, 5, 5, 99, 0, 0, 0, 0, 0, 0, 0, 99, 10, 99, 10, 99, 10, 99, 7, 7, 7, 99, 10, 99, 9, 9, 9, 9, 9, 9, 9, 99};
+int capture_riff_length = sizeof capture_riff / sizeof capture_riff[0];
+double capture_duration = 94;
+
+int8_t direction_riff[] = {-4, 99};
+int direction_riff_length = 2;
+double direction_duration = 50;
+
+int8_t select_riff[] = {23, 28, 99};
+int select_riff_length = 3;
+double select_duration = 50;
+
+int8_t miss_riff[] = {19, 18, 17, 16, 16, 16, 99};
+int miss_riff_length = sizeof miss_riff / sizeof miss_riff[0];
+double miss_duration = 120;
+
+int8_t attack_riff[] = {14, 18, 99};
+int attack_riff_length = sizeof attack_riff / sizeof attack_riff[0];
+double attack_duration = 120;
+
+int8_t faint_riff[] = {14, 14, 10, 99, 14, 14, 10, 10, 10, 10, 10, 99};
+int faint_riff_length = sizeof faint_riff / sizeof faint_riff[0];
+double faint_duration = 100;
+
+int8_t win_riff[] = {16, 18, 20, 21, 23, 23, 27, 27, 28, 28, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 99};
+int win_riff_length = sizeof win_riff / sizeof win_riff[0];
+double win_duration = 80;
+
+int8_t lose_riff[] = {5, 5, 5, 5, 6, 6, 5, 5, 5, 5, 0, 0, 3, 3, 3, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 99};
+int lose_riff_length = sizeof lose_riff / sizeof lose_riff[0];
+double lose_duration = 80;
+```
