@@ -9,7 +9,7 @@
 
 Unfortunately the second one hasn't been assembled, although all the parts are printed and plates are laser cut. I did indeed have issues with the filament getting tangled in the middle of the night and coming in in the morning to a spagetti mess of filament.
 
-I also only had one ESP since my teammates needed theirs to test still, and it took quite a few hours to put together the first profeball between the snipping and soldering and dremeling (on the shell for the battery pack to fit). I assume the second one would go faster now that I have had trial and error. 
+I also only had one ESP since my teammates needed theirs to test still, and it took a few hours to put together the first profeball between the snipping and soldering. I assume the second one would go faster now that I have had trial and error. 
 
 ![Parts for Both Profeballs](https://imgur.com/a/B2M47RF)
 
@@ -36,7 +36,25 @@ At Joe's suggestion, we went ahead and expanded the Profemon databse with some "
 
 ![Battle with sound](https://www.youtube.com/watch?v=iJIVGkFIWJU)
 
-After trying the MP3, we realized it didn't give us the retro sounds we wanted and was very bulky. So we went with using the buzzer. We made riffs that play after the player moves the joysticks and throughout the battle sequence based off the sounds in Pokemon.
+After trying the MP3, we realized it didn't give us the retro sounds we wanted and was very bulky. So we went with using the buzzer. To make producing riffs easier, we implemented the following function `make_riff`
+
+```cpp
+Riff make_riff(int8_t *d, int length, double duration)
+{
+  Riff newRiff;
+  for(int i = 0;i < length;i++)
+  {
+    if(d[i] != 99)
+      newRiff.notes[i] = new_note * pow(MULT,d[i]);
+    else
+      newRiff.notes[i] = 0;
+  }
+  newRiff.length = length;
+  newRiff.note_period = duration;
+  return newRiff;
+}
+```
+which allow us to write notes using quasi-midi numbers instead of frequencies, and allow us to have rests defined as the special constant 99. We used this format to make riffs that play after the player moves the joysticks and throughout the battle sequence based off the sounds in Pokemon. For those sounds hard to imitate using the buzzer, we did some composing and sound effect design.
 
 ```cpp
 // riffs
