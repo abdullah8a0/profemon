@@ -1,6 +1,7 @@
 # Week 3 Deliverables
 
 ## Abdullah
+Very sick with covid :( Since pairing is working even without dual mode, we worked around it.
 
 ## Ivy
 ### Profeball shell printed
