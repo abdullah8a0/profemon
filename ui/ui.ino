@@ -221,6 +221,8 @@ void setup()
   SPI.begin();          // init SPI bus
   rfid.PCD_Init();      // init MFRC522
 
+  WiFi.mode(WIFI_MODE_APSTA);
+
   WiFi.begin(network, password); // attempt to connect to wifi
   uint8_t count = 0;             // count used for Wifi check times
   Serial.print("Attempting to connect to ");
@@ -420,8 +422,6 @@ void loop()
       switch (pair_state)
       {
       case PAIR_START:
-        game_state = GAME_SELECT;
-        game_id = 20;
 
         if (joydir == JOYSTICK_LEFT)
         {
@@ -444,6 +444,7 @@ void loop()
         // do broadcast here
         if (broadcast(myid))
         {
+          WiFi.softAPdisconnect();
           Serial.println("Broadcast Successful");
           if (!sync_ids(myid, temp))
           {
@@ -804,29 +805,16 @@ bool broadcast(char *my_id)
 
   char *ssid = (char *)malloc(sizeof(char) * 13);
   strcpy(ssid, "Profemon");
-  strcat(ssid, my_id);
-
+  strcat(ssid, myid);
   char wifi_pass[] = "Profemon";
-
-  WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, wifi_pass);
+  free(ssid);
   int start_time = millis();
   while (millis() - start_time < HOSTING_TIMEOUT_MS)
   {
   }
-  free(ssid);
-  WiFi.disconnect();
-  WiFi.mode(WIFI_STA);
+
   return true;
-  // if (connect_wifi())
-  // {
-  //   return true;
-  // }
-  // else
-  // {
-  //   return true;
-  //   return false;
-  // }
 }
 
 // returns a 4 character string of id
