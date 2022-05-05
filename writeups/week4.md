@@ -14,13 +14,13 @@ Not a lot of code depended on the single station mode. I didn't have to rewrite 
 
 ## Ivy
 ### Present Profeball example with electronics plates mounted inside and wiring to modules. Try to get the second one done barring issues with the 3D printer filament getting tangled in the middle of the night >:( 
-![Assembled Profeball Tour](https://www.youtube.com/watch?v=zVC25HnnGds)
+[Assembled Profeball Tour](https://www.youtube.com/watch?v=zVC25HnnGds)
 
 Unfortunately the second one hasn't been assembled, although all the parts are printed and plates are laser cut. I did indeed have issues with the filament getting tangled in the middle of the night and coming in in the morning to a spagetti mess of filament.
 
-I also only had one ESP since my teammates needed theirs to test still, and it took quite a few hours to put together the first profeball between the snipping and soldering and dremeling (on the shell for the battery pack to fit). I assume the second one would go faster now that I have had trial and error. 
+I also only had one ESP since my teammates needed theirs to test still, and it took a few hours to put together the first profeball between the snipping and soldering. I assume the second one would go faster now that I have had trial and error. 
 
-![Parts for Both Profeballs](https://imgur.com/a/B2M47RF)
+![Parts for Both Profeballs](https://i.imgur.com/draj7un.jpg)
 
 Figuring out a way to mount the electronics and feed them through and keep them from getting tangled was much more of a challenge than I initially expected. Especially because the wires loved to come back out of the breadboard holes after I moved the part it was connected to. I ended up putting a dab of hot glue to secure them in place. I would like to try this with a solderable breadboard, for the sake of the wires staying where I want them to be and the breadboard requiring less volume. Unfortuantely, for the same reason I didn't use superglue on this, I would struggle to return an esp in pristine condition.
     
@@ -43,9 +43,27 @@ At Joe's suggestion, we went ahead and expanded the Profemon databse with some "
 ## Andi & Heidi
 ### Show video battle being stepped through with sound effect.
 
-![Battle with sound](https://www.youtube.com/watch?v=iJIVGkFIWJU)
+[Battle with sound](https://www.youtube.com/watch?v=iJIVGkFIWJU)
 
-After trying the MP3, we realized it didn't give us the retro sounds we wanted and was very bulky. So we went with using the buzzer. We made riffs that play after the player moves the joysticks and throughout the battle sequence based off the sounds in Pokemon.
+After trying the MP3, we realized it didn't give us the retro sounds we wanted and was very bulky. So we went with using the buzzer. To make producing riffs easier, we implemented the following function `make_riff`
+
+```cpp
+Riff make_riff(int8_t *d, int length, double duration)
+{
+  Riff newRiff;
+  for(int i = 0;i < length;i++)
+  {
+    if(d[i] != 99)
+      newRiff.notes[i] = new_note * pow(MULT,d[i]);
+    else
+      newRiff.notes[i] = 0;
+  }
+  newRiff.length = length;
+  newRiff.note_period = duration;
+  return newRiff;
+}
+```
+which allow us to write notes using quasi-midi numbers instead of frequencies, and allow us to have rests defined as the special constant 99. We used this format to make riffs that play after the player moves the joysticks and throughout the battle sequence based off the sounds in Pokemon. For those sounds hard to imitate using the buzzer, we did some composing and sound effect design.
 
 ```cpp
 // riffs
