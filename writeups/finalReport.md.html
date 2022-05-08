@@ -1,10 +1,10 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
 
 **Profemon - Final Report**
 
-AirPiano, aims to turn the often monotonous experience of climbing stairs into an enjoyable and interactive experience. To do this, we setup using lasers mounted on each step pointing towards phototransistors in order to detect when someone places their foot on the step. Breaking the laser beam triggers a musical note to play through a speaker, allowing the user to create music as they ascend or descend the stairs.
-We have created several several modes in which users can switch between: freeplay mode, song mode, and sequencer mode. These modes allow us to take advantage of different aspects of our ESP and serverside code (database, website interface) and give users different things to do with the AirPiano such as features for uploading and listening to songs that have been created on the AirPiano, smart lamp notifications when a new song has been posted, and a website to see others' creations.
+In our project, we implement a dynamic, pvp, in-person game similar to Pokemon Go. The objective of the game would be to capture professors via scanning an RFID chip they would carry (ideally their MIT ID). This would force players to go around finding and interacting with professors, allowing them to know their professors better. After a professor is captured and the player is recognized as owning that professor, they are able to use the corresponding Profemon in pvp battles. The captured Profemons will be stored in an online database managing what Profemons a user has. In these battles, players meet up physically (which is verified by the ESP32 and bluetooth module) and select their profemons, and battle it out! The battle is verified server side, i.e. each turn is sent to the server which resolves timing conflicts and keeps record. The server receives the choice of attack from each player. Once the server has heard back from both players, the devices will receive the updated game state by periodically querying the server.
 
-![Full System Video](https://youtu.be/JdyyPLY9_Gs)
+![Full System Video](https://youtu.be/48xc-4H155g)
 
 Functionality
 ===============================================================================
@@ -395,3 +395,5 @@ Team Members
 * Heidi Lei
 * Andi Liu
 * Ivy Liu
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js" charset="utf-8"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
