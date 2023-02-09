@@ -6,7 +6,7 @@
 
 In our project, we implemented a dynamic, pvp, in-person turn-based fighting game similar to Pokemon Go. Players can “capture” professors by scanning their MIT ID, which forces them to go around finding and interacting with professors, allowing them to know their professors better. After a “Profemon” is captured, it will be stored in a database on a server to recognize the player as having captured that Profemon, so players can use the corresponding Profemon in pvp battles. In these battles, players meet up physically to pair using WiFi concurrent access point station mode, then select their profemons and battle it out! The battle calculations are done on the server after the server has received moves from both players. Once the server has heard back from both players, the devices will receive the updated game state by periodically querying the server.
 
-![Full System Video](https://youtu.be/48xc-4H155g)
+[![Full System Video](https://img.youtube.com/vi/48xc-4H155g/0.jpg)](https://www.youtube.com/watch?v=48xc-4H155g)
 
 Functionality
 ===============================================================================
